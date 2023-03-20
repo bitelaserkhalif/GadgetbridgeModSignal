@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <EditTextPreference
+        android:icon="@drawable/ic_vpn_key"
+        android:key="authkey"
+        android:maxLength="16"
+        android:summary="@string/pref_summary_authkey"
+        android:title="@string/pref_title_authkey" />
+
+    <Preference
+        android:icon="@drawable/ic_vpn_key"
+        android:persistent="false"
+        android:key="authkey_explanation_new_auth_protocol"
+        android:title="@string/pref_title_authkey_huami_generate"
+        android:summary="@string/pref_explanation_authkey_huami_generate" >
+        <intent
+            android:targetPackage="nodomain.freeyourgadget.gadgetbridge"
+            android:targetClass="nodomain.freeyourgadget.gadgetbridge.devices.huami.HuamiKeygenActivity" />
+            />
+    </Preference>
+</androidx.preference.PreferenceScreen>
