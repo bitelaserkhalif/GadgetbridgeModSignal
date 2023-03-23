@@ -132,7 +132,7 @@ public abstract class HuamiCoordinator extends AbstractBLEDeviceCoordinator {
 
     @Override
     public int[] getSupportedDeviceSpecificAuthenticationSettings() {
-        return new int[]{R.xml.devicesettings_pairingkey};
+        return new int[]{R.xml.devicesettings_pairingkey_huami};
     }
 
     @Override

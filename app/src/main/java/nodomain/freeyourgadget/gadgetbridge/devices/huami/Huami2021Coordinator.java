@@ -273,7 +273,7 @@ public abstract class Huami2021Coordinator extends HuamiCoordinator {
     @Override
     public int[] getSupportedDeviceSpecificAuthenticationSettings() {
         return new int[]{
-                R.xml.devicesettings_pairingkey
+                R.xml.devicesettings_pairingkey_huami
         };
     }
 
