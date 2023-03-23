@@ -76,13 +76,13 @@
                 android:maxLength="3"
                 android:title="@string/mi2_prefs_inactivity_warnings_threshold" />
 
-            <nodomain.freeyourgadget.gadgetbridge.util.TimePreference
+            <blk.freeyourgadget.gadgetbridge.util.TimePreference
                 android:defaultValue="06:00"
                 android:dependency="inactivity_warnings_enable"
                 android:key="inactivity_warnings_start"
                 android:title="@string/mi2_prefs_do_not_disturb_start" />
 
-            <nodomain.freeyourgadget.gadgetbridge.util.TimePreference
+            <blk.freeyourgadget.gadgetbridge.util.TimePreference
                 android:defaultValue="22:00"
                 android:dependency="inactivity_warnings_enable"
                 android:key="inactivity_warnings_end"
@@ -177,12 +177,12 @@
                 android:title="@string/mi2_prefs_do_not_disturb"
                 android:summary="%s" />
 
-            <nodomain.freeyourgadget.gadgetbridge.util.TimePreference
+            <blk.freeyourgadget.gadgetbridge.util.TimePreference
                 android:defaultValue="22:00"
                 android:key="do_not_disturb_start"
                 android:title="@string/mi2_prefs_do_not_disturb_start" />
 
-            <nodomain.freeyourgadget.gadgetbridge.util.TimePreference
+            <blk.freeyourgadget.gadgetbridge.util.TimePreference
                 android:defaultValue="07:00"
                 android:key="do_not_disturb_end"
                 android:title="@string/mi2_prefs_do_not_disturb_end" />

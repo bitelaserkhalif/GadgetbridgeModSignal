@@ -10,6 +10,6 @@
 
     <root level="DEBUG">
         <appender-ref ref="STDOUT" />
-        <!-- The FILE appender is added programmatically by nodomain.freeyourgadget.gadgetbridge.Logging -->
+        <!-- The FILE appender is added programmatically by blk.freeyourgadget.gadgetbridge.Logging -->
     </root>
 </configuration>

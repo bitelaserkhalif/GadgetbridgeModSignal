@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
-    <string name="application_name_generic">Gadgetbridge</string>
+    <string name="application_name_generic">Gadgetbridge Mod Signal</string>
     <string name="title_activity_controlcenter_generic">Gadgetbridge</string>
     <string name="about_activity_title_generic">About Gadgetbridge</string>
     <string name="about_description_generic">Cloudless copylefted libre replacement for closed source Android gadget apps from vendors.</string>
@@ -1429,7 +1429,7 @@
     <string name="hr_widget_last_notification">Last notification</string>
     <string name="homepage_url" translatable="false">Homepage: <a href="https://gadgetbridge.org/">https://gadgetbridge.org/</a></string>
     <string name="codeberg_url" translatable="false">Code: <a href="https://codeberg.org/Freeyourgadget/Gadgetbridge">https://codeberg.org/Freeyourgadget/Gadgetbridge</a></string>
-    <string name="fdroid_url" translatable="false">F-Droid: <a href="https://f-droid.org/packages/nodomain.freeyourgadget.gadgetbridge/">https://f-droid.org/packages/nodomain.freeyourgadget.gadgetbridge/</a></string>
+    <string name="fdroid_url" translatable="false">F-Droid: <a href="https://f-droid.org/packages/blk.freeyourgadget.gadgetbridge/">https://f-droid.org/packages/blk.freeyourgadget.gadgetbridge/</a></string>
     <string name="about_title">About</string>
     <string name="about_version">Version %s</string>
     <string name="about_hash">Commit %s</string>

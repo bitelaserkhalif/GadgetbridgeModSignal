@@ -15,15 +15,15 @@
 -keepclassmembers class * {
     @android.webkit.JavascriptInterface <methods>;
 }
--keepclassmembers class nodomain.freeyourgadget.gadgetbridge.service.devices.pebble.webview.JSInterface {
+-keepclassmembers class blk.freeyourgadget.gadgetbridge.service.devices.pebble.webview.JSInterface {
     public *;
 }
 # Required for reflection in BangleJSDeviceSupport
--keepclassmembers class nodomain.freeyourgadget.gadgetbridge.model.CallSpec {
+-keepclassmembers class blk.freeyourgadget.gadgetbridge.model.CallSpec {
     public static *;
 }
 # Required for reflection in method GattCharacteristic.initDebugMap()
--keepclassmembers class nodomain.freeyourgadget.gadgetbridge.service.btle.GattCharacteristic {
+-keepclassmembers class blk.freeyourgadget.gadgetbridge.service.btle.GattCharacteristic {
     public static *;
 }
 -keepattributes JavascriptInterface
@@ -62,4 +62,4 @@
 }
 
 # Keep generated protobuf classes
--keep class nodomain.freeyourgadget.gadgetbridge.proto.* { *; }
+-keep class blk.freeyourgadget.gadgetbridge.proto.* { *; }

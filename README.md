@@ -1,3 +1,24 @@
+Gadgetbridge Mod Signal
+============
+Is a project for my oncoming thesis. This adds functions to gadgetbridge
+that can be considered as anti-feature for convenience, but deletes Pebble capability
+due to conflicts with original gadgetbridge application.
+
+## What changed?
+**(WARNING: Some of them WIP!)**
+
+
+- Huami (XIAOMI and AMAZFIT)
+  - Add key generation systems
+- Removal of Pebble capability due to conflicting install with gadgetbridge. If you want that, do not install this app.
+- COMING SOON:
+  - Age based heart rate limit
+  - Allow low heart rate warning (false positive can occur if watch are taken off!)
+  - Notify via whatsapp
+
+
+Original Readme
+============
 Gadgetbridge is now hosted on [codeberg.org](https://codeberg.org/Freeyourgadget/Gadgetbridge/).
 
 <a href="https://codeberg.org/Freeyourgadget/Gadgetbridge/">

@@ -52,7 +52,7 @@
                 android:key="pref_agps_expiry_reminder_enabled"
                 android:title="@string/pref_agps_expiry_reminder_enabled" />
 
-            <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+            <blk.freeyourgadget.gadgetbridge.util.XTimePreference
                 android:defaultValue="20:00"
                 android:dependency="pref_agps_expiry_reminder_enabled"
                 android:key="pref_agps_expiry_reminder_time"

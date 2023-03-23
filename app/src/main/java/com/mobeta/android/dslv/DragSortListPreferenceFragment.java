@@ -57,7 +57,7 @@ import androidx.preference.Preference;
 import java.util.ArrayList;
 import java.util.List;
 
-import nodomain.freeyourgadget.gadgetbridge.R;
+import blk.freeyourgadget.gadgetbridge.R;
 
 
 public class DragSortListPreferenceFragment extends ListPreferenceDialogFragmentCompat implements ListPreference.TargetFragment {

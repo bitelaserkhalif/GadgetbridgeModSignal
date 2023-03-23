@@ -15,8 +15,8 @@
         android:title="@string/pref_title_authkey_huami_generate"
         android:summary="@string/pref_explanation_authkey_huami_generate" >
         <intent
-            android:targetPackage="nodomain.freeyourgadget.gadgetbridge"
-            android:targetClass="nodomain.freeyourgadget.gadgetbridge.devices.huami.HuamiKeygenActivity" />
+            android:targetPackage="blk.freeyourgadget.gadgetbridge"
+            android:targetClass="blk.freeyourgadget.gadgetbridge.devices.huami.HuamiKeygenActivity" />
             />
     </Preference>
 </androidx.preference.PreferenceScreen>
