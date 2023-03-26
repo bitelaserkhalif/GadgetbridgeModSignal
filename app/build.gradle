@@ -52,6 +52,7 @@ android {
     defaultConfig {
         applicationId "blk.freeyourgadget.gadgetbridge"
         minSdkVersion 21
+        //noinspection ExpiredTargetSdkVersion
         targetSdkVersion 29
 
         // Note: always bump BOTH versionCode and versionName!
@@ -143,24 +144,6 @@ android {
             } else {
                 signingConfig signingConfigs.debug
             }
-        }
-        nopebble {
-            applicationIdSuffix ".nightly_nopebble"
-            versionNameSuffix "-${getGitHashShort}"
-            minifyEnabled true
-            if (System.getProperty("nightly_store_file") != null) {
-                signingConfig signingConfigs.nightly
-            } else {
-                signingConfig signingConfigs.debug
-            }
-            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
-            resValue "string", "pebble_content_provider", "com.getpebble.android.nopebble.provider"
-            resValue "string", "app_name", "@string/application_name_main_nopebble"
-            resValue "string", "title_activity_controlcenter", "@string/title_activity_controlcenter_main_nopebble"
-            resValue "string", "about_activity_title", "@string/about_activity_title_main_nopebble"
-            resValue "string", "about_description", "@string/about_description_main_nopebble"
-            resValue "string", "gadgetbridge_running", "@string/gadgetbridge_running_main_nopebble"
-            debuggable true
         }
 
         applicationVariants.all { variant ->
