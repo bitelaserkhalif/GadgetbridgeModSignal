@@ -2008,4 +2008,11 @@
     <string name="pref_title_lock_unlock">Lock</string>
     <string name="pref_title_authkey_huami_generate">Generate Key (Huami)</string>
     <string name="pref_explanation_authkey_huami_generate">To generate the key, login is required to Mi Account or Amazfit. Login info are not stored for safety reasons.</string>
+    <string name="Username">Username</string>
+    <string name="miband_pairing_keygen_hint">For AMAZFIT: Must enter username and password, and also toggle the mode switch. For Xiaomi, click \"log in with Mi Account\" instead</string>
+    <string name="miband_urlcopy">Paste the URL here...</string>
+    <string name="MiGetToken">Get Token</string>
+    <string name="MiDoSignIn">Sign In to xiaomi</string>
+    <string name="MiGetAGPS">Get AGPS</string>
+    <string name="miband_pref_title_keygen">Huami Keygen</string>
 </resources>
