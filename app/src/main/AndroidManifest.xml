@@ -679,6 +679,10 @@
             android:label="@string/miband_pref_title_keygen"
             android:parentActivityName="blk.freeyourgadget.gadgetbridge.devices.huami.HuamiKeygenActivity" />
         <activity
+            android:name="blk.freeyourgadget.gadgetbridge.devices.huami.HuamiBrowserActivity"
+            android:label="@string/miband_pref_title_keygen"
+            android:parentActivityName="blk.freeyourgadget.gadgetbridge.devices.huami.HuamiBrowserActivity" />
+        <activity
             android:name="blk.freeyourgadget.gadgetbridge.devices.qhybrid.HybridHRWatchfaceDesignerActivity"
             android:label="@string/qhybrid_title_watchface_designer"
             android:screenOrientation="portrait"

@@ -2015,4 +2015,7 @@
     <string name="MiDoSignIn">Sign In to xiaomi</string>
     <string name="MiGetAGPS">Get AGPS</string>
     <string name="miband_pref_title_keygen">Huami Keygen</string>
+    <string name="toast_browser_keygen_xiaomi_acquire">Keygen URL has been acquired!</string>
+    <string name="toast_browser_xiaomi_page">A browser page would open, you must sign in using Xiaomi Account. After that, a redirection would happen and page says certificate problem. Copy the URL (hm.xiaomi) and paste to text box.</string>
+    <string name="devicetype_amazfit">Amazfit</string>
 </resources>
