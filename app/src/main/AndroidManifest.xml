@@ -64,6 +64,7 @@
 
     <application
         android:name="blk.freeyourgadget.gadgetbridge.GBApplication"
+        android:usesCleartextTraffic="true"
         android:allowBackup="false"
         android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"

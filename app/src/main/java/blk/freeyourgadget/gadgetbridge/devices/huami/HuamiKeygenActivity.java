@@ -20,10 +20,14 @@
 
 package blk.freeyourgadget.gadgetbridge.devices.huami;
 
+import static blk.freeyourgadget.gadgetbridge.util.BondingUtil.STATE_DEVICE_CANDIDATE;
+import static blk.freeyourgadget.gadgetbridge.util.GB.ERROR;
+
 import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.webkit.WebView;
 import android.widget.Button;
@@ -31,53 +35,50 @@ import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import androidx.activity.result.ActivityResult;
-import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.android.volley.AuthFailureError;
-import com.android.volley.NetworkResponse;
-import com.android.volley.Request;
-import com.android.volley.RequestQueue;
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
-import com.android.volley.VolleyLog;
-import com.android.volley.toolbox.HttpHeaderParser;
-import com.android.volley.toolbox.StringRequest;
-import com.android.volley.toolbox.Volley;
-import com.google.gson.Gson;
-
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
-import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.ProtocolException;
-import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
 import blk.freeyourgadget.gadgetbridge.R;
 import blk.freeyourgadget.gadgetbridge.activities.AbstractGBActivity;
 import blk.freeyourgadget.gadgetbridge.activities.DiscoveryActivity;
+import blk.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
 import blk.freeyourgadget.gadgetbridge.impl.GBDeviceCandidate;
 import blk.freeyourgadget.gadgetbridge.util.GB;
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class HuamiKeygenActivity  extends AbstractGBActivity  {
     private TextView message;
     private WebView mWebview ;
+
     private EditText keygenresult;
+    private EditText guiusername;
+    private EditText guipassword;
+    private TextView flavortextusername;
+    private TextView flavortextpassword;
     private Button buttonxiaomilogin;
     private Switch huamimodeSwitch;
     private GBDeviceCandidate deviceCandidate;
@@ -86,6 +87,7 @@ public class HuamiKeygenActivity  extends AbstractGBActivity  {
     boolean isXiaomis = false;
     Map<String, String> url_map = createUrlMap();
     Map<String, Map<String, String>> payload_map = createPayloadMap();
+    Map<String, String> error_map = createErrorMap();
     private boolean isXiaomi = false;
     ActivityResultLauncher<Intent> ActivityResultLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
@@ -95,7 +97,7 @@ public class HuamiKeygenActivity  extends AbstractGBActivity  {
                     Intent data = result.getData();
                     //doSomeOperations();
                     String keygen_url = data.getStringExtra("keygen_url");
-                    generate_xiaomi_token(keygen_url);
+                    fetch_xiaomi_token(keygen_url);
                 }
             });
     public static Map<String, String> createUrlMap() {
@@ -103,7 +105,7 @@ public class HuamiKeygenActivity  extends AbstractGBActivity  {
         myMap.put("login_xiaomi", "https://account.xiaomi.com/oauth2/authorize?skip_confirm=false&client_id=2882303761517383915&pt=0&scope=1+6000+16001+20000&redirect_uri=https%3A%2F%2Fhm.xiaomi.com%2Fwatch.do&_locale=en_US&response_type=code");
         myMap.put("tokens_amazfit", "https://api-user.huami.com/registrations/{user_email}/tokens");
         myMap.put("login_amazfit", "https://account.huami.com/v2/client/login");
-        myMap.put("devices", "https://api-mifit-us2.huami.com/users/{user_id}/devices");
+        myMap.put("devices", "https://api-mifit-us2.huami.com/users/%s/devices?enableMultiDevice=true"); //{user_id}
         myMap.put("agps", "https://api-mifit-us2.huami.com/apps/com.huami.midong/fileTypes/{pack_name}/files");
         myMap.put("data_short", "https://api-mifit-us2.huami.com/users/{user_id}/deviceTypes/4/data");
         myMap.put("logout", "https://account-us2.huami.com/v1/client/logout");
@@ -120,7 +122,6 @@ public class HuamiKeygenActivity  extends AbstractGBActivity  {
         Map<String, String> inner_config5 = new HashMap<>();
         Map<String, String> inner_config6 = new HashMap<>();
         Map<String, String> inner_config7 = new HashMap<>();
-        Map<String, String> inner_config8 = new HashMap<>();
 
         myMap.put("login_xiaomi", null);
 
@@ -174,6 +175,14 @@ public class HuamiKeygenActivity  extends AbstractGBActivity  {
         return myMap;
     }
 
+    public static Map<String,String> createErrorMap(){
+        Map<String,String> myMap = new HashMap<String,String>();
+        myMap.put("0106", "106 = Verification failed, wrong token.");
+        myMap.put("0113", "113 = Wrong region");
+        myMap.put("0115", "115 = Account disabled.");
+        myMap.put("0117", "117 = Account not registered");
+        return myMap;
+    }
     public String  randomDeviceId (){
         Random r = new Random();
         int low = 0;
@@ -196,15 +205,7 @@ public class HuamiKeygenActivity  extends AbstractGBActivity  {
  */
 
     protected void onCreate(Bundle savedInstanceState) {
-        ActivityResultLauncher<Intent> ActivityResultLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    if (result.getResultCode() == AppCompatActivity.RESULT_OK) {
-                        Intent data = result.getData();
-                        // ...
-                    }
-                }
-        );
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_huami_token_gen);
         message = findViewById(R.id.miband_keygen_mode);
@@ -215,11 +216,37 @@ public class HuamiKeygenActivity  extends AbstractGBActivity  {
         if (huamimodeSwitch.isChecked()){
             message.setText(R.string.devicetype_miband);
             isXiaomi = huamimodeSwitch.isChecked();
+            guiusername = findViewById(R.id.amazfit_username);
+            guipassword = findViewById(R.id.amazfit_password);
+            flavortextusername = findViewById(R.id.amazfit_username_message);
+            flavortextpassword = findViewById(R.id.amazfit_password_message);
+            guiusername.setVisibility(View.GONE);
+            guipassword.setVisibility(View.GONE);
+            flavortextusername.setVisibility(View.GONE);
+            flavortextpassword.setVisibility(View.GONE);
+            buttonxiaomilogin.setVisibility(View.VISIBLE);
         }else{
             message.setText(R.string.devicetype_amazfit);
             isXiaomi = huamimodeSwitch.isChecked();
+            guiusername = findViewById(R.id.amazfit_username);
+            guipassword = findViewById(R.id.amazfit_password);
+            flavortextusername = findViewById(R.id.amazfit_username_message);
+            flavortextpassword = findViewById(R.id.amazfit_password_message);
+            guiusername.setVisibility(View.VISIBLE);
+            guipassword.setVisibility(View.VISIBLE);
+            flavortextusername.setVisibility(View.VISIBLE);
+            flavortextpassword.setVisibility(View.VISIBLE);
+            buttonxiaomilogin.setVisibility(View.GONE);
         }
+        Intent intent = getIntent();
 
+        deviceCandidate = intent.getParcelableExtra(DeviceCoordinator.EXTRA_DEVICE_CANDIDATE);
+        if (deviceCandidate == null && savedInstanceState != null) {
+            deviceCandidate = savedInstanceState.getParcelable(STATE_DEVICE_CANDIDATE);
+        }
+        if (deviceCandidate == null) {
+            Toast.makeText(this, getString(R.string.message_cannot_pair_no_mac), Toast.LENGTH_SHORT).show();
+        }
 
 
         huamimodeSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener(){
@@ -233,6 +260,15 @@ public class HuamiKeygenActivity  extends AbstractGBActivity  {
                         //huamimodeSwitch.setChecked(false);
                         message.setText(R.string.devicetype_miband);
                         isXiaomi = isChecked;
+                        guiusername = findViewById(R.id.amazfit_username);
+                        guipassword = findViewById(R.id.amazfit_password);
+                        flavortextusername = findViewById(R.id.amazfit_username_message);
+                        flavortextpassword = findViewById(R.id.amazfit_password_message);
+                        guiusername.setVisibility(View.GONE);
+                        guipassword.setVisibility(View.GONE);
+                        flavortextusername.setVisibility(View.GONE);
+                        flavortextpassword.setVisibility(View.GONE);
+                        buttonxiaomilogin.setVisibility(View.VISIBLE);
                     }
                 }
                    else {
@@ -241,9 +277,17 @@ public class HuamiKeygenActivity  extends AbstractGBActivity  {
 
 
                     isXiaomi = isChecked;
+                    guiusername = findViewById(R.id.amazfit_username);
+                    guipassword = findViewById(R.id.amazfit_password);
+                    flavortextusername = findViewById(R.id.amazfit_username_message);
+                    flavortextpassword = findViewById(R.id.amazfit_password_message);
+                    guiusername.setVisibility(View.VISIBLE);
+                    guipassword.setVisibility(View.VISIBLE);
+                    flavortextusername.setVisibility(View.VISIBLE);
+                    flavortextpassword.setVisibility(View.VISIBLE);
+                    buttonxiaomilogin.setVisibility(View.GONE);
                 }
 
-                //LOG.debug("Switch State=", "" + isChecked);
 
             }
 
@@ -252,32 +296,14 @@ public class HuamiKeygenActivity  extends AbstractGBActivity  {
             @Override
             public void onClick(View view) {
                 GB.toast(getBaseContext(), getString(R.string.toast_browser_xiaomi_page), 2000, 0);
-                LOG.debug(String.valueOf(Uri.parse(url_map.get("login_xiaomi"))));
                 get_access_token(isXiaomi);
 
             }
         });
-/*
-this.deviceCandidate = getIntent().getParcelableExtra(DeviceCoordinator.EXTRA_DEVICE_CANDIDATE);
-        if (deviceCandidate == null && savedInstanceState != null) {
-            this.deviceCandidate = savedInstanceState.getParcelable(STATE_DEVICE_CANDIDATE);
-        }
-        //LOG.debug(deviceCandidate.toString());
-        if (deviceCandidate == null) {
-            Toast.makeText(this, getString(R.string.message_cannot_pair_no_mac), Toast.LENGTH_SHORT).show();
-            startActivity(new Intent(this, DiscoveryActivity.class).setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP));
-            finish();
-            return;
-        }
-        DeviceCoordinator coordinator = DeviceHelper.getInstance().getCoordinator(deviceCandidate);
-        GBDevice device = DeviceHelper.getInstance().toSupportedDevice(deviceCandidate);
-        //message.setText(device.getAliasOrName());
-        //message.setText(deviceCandidate);
-*/
+
 
     }
     private void get_access_token(boolean isXiaomi){
-        LOG.debug(String.valueOf(isXiaomi));
         if(isXiaomi==true){
             Intent i = new Intent(this, HuamiBrowserActivity.class);
             i.putExtra("url_map", (Serializable) url_map);
@@ -289,80 +315,178 @@ this.deviceCandidate = getIntent().getParcelableExtra(DeviceCoordinator.EXTRA_DE
         }
     }
 
-    private void generate_xiaomi_token(String uri){
+    private void fetch_xiaomi_token(@NonNull String uri){
         if(uri.isEmpty()==false){
             Uri uri_link=Uri.parse(uri);//parse URL
             String getcode = uri_link.getQueryParameter("code");
             if(getcode.isEmpty()==false){
                 //ALMOST THERE!
-                LOG.debug("attempt to login with the token: "+getcode);
                 String login_url = url_map.get("login_amazfit");//normal
-                LOG.debug("login url: "+login_url);
+                String devices = url_map.get("devices");//normal
 
-                LOG.debug("test "+ payload_map.toString());
-                Map<String, String> data = payload_map.get("login_amazfit");
+                Map<String, String> login_amazfit = payload_map.get("login_amazfit");
                 try{
-                    RequestQueue requestQueue = Volley.newRequestQueue(this);
+                    //RequestQueue requestQueue = Volley.newRequestQueue(this);
                     String url = login_url;
-                    data.put("country_code",data.get("country_code"));
-                    data.put("device_id",randomDeviceId());
-                    data.put("third_name","mi-watch");//later add "huami" if using "amazfit"
-                    data.put("code",getcode);//code add
-                    data.put("grant_type","request_token");//later add "access_token" if using "amazfit"
-                    //String requestBody = new Gson().toJson(data);
-                    String requestBody = data.toString();
 
-                    LOG.debug("Requests " + requestBody);
-                    StringRequest stringRequest = new StringRequest(Request.Method.POST, url, new Response.Listener<String>() {
+                    //String requestBody = data.toString();
+                    // to post, we are using x-www-form-urlencoded
+
+                    /** This is phase 1: post procedure, generated using postman **/
+                    //region Fetch user id and app id
+
+                    String requests = String.format("country_code=%s&app_name=%s&code=%s&app_version=%s&device_id=%s&device_model=%s&grant_type=%s&allow_registration=%s&dn=%s&source=%s&third_name=%s&lang=%s",
+                            "US",
+                            login_amazfit.get("app_name"),
+                            getcode,
+                            login_amazfit.get("app_version"),
+                            randomDeviceId(),
+                            login_amazfit.get("device_model"),
+                            "request_token",
+                            login_amazfit.get("allow_registration"),
+                            login_amazfit.get("dn"),
+                            login_amazfit.get("source"),
+                            "mi-watch",
+                            login_amazfit.get("lang"));
+
+                    post(url, requests, new Callback() {
                         @Override
-                        public void onResponse(String response) {
-                            LOG.debug("VOLLEY " + response);
-                        }
-                    }, new Response.ErrorListener() {
-                        @Override
-                        public void onErrorResponse(VolleyError error) {
-                            LOG.debug("VOLLEY " + error.toString());
-                        }
-                    }){
-                        @Override
-                        public String getBodyContentType() {
-                            return "application/json; charset=utf-8";
+                        public void onFailure(Call call, IOException e) {
+                            LOG.debug("failure error: "+ e.toString());
+                            // Something went wrong
                         }
 
                         @Override
-                        public byte[] getBody() {
-                            try {
-                                return requestBody == null ? null : requestBody.getBytes("utf-8");
-                            } catch (UnsupportedEncodingException uee) {
-                                VolleyLog.wtf("Unsupported Encoding while trying to get the bytes of %s using %s", requestBody, "utf-8");
-                                return null;
+                        public void onResponse(Call call, Response response) throws IOException {
+                            if (response.isSuccessful()) {
+                                String responseStr = response.body().string();
+                                try {
+                                    JSONObject jobj = new JSONObject(responseStr);
+                                    if (jobj.has("error_code")){
+                                        GB.toast(getBaseContext(), "LOGIN ERROR: "+ error_map.get(jobj.get("error_code").toString()), 2000, ERROR);
+                                        LOG.debug("error logging in");
+                                    }
+
+                                    if (!jobj.has("token_info")){
+                                        GB.toast(getBaseContext(), "LOGIN ERROR: token_info is missing", 2000, ERROR);
+                                        LOG.debug("missing: token_info");
+                                    }
+
+                                    JSONObject token_info = jobj.getJSONObject("token_info");
+                                    if(!token_info.has("app_token")){
+                                        GB.toast(getBaseContext(), "LOGIN ERROR: app_token is missing", 2000, ERROR);
+                                        LOG.debug("missing: app_token");
+
+                                    }
+                                    if(!token_info.has("login_token")){
+                                        GB.toast(getBaseContext(), "LOGIN ERROR: login_token is missing", 2000, ERROR);
+                                        LOG.debug("missing: login_token");
+                                    }
+                                    if(!token_info.has("user_id")){
+                                        GB.toast(getBaseContext(), "LOGIN ERROR: user_id is missing", 2000, ERROR);
+                                        LOG.debug("missing: user_id");
+                                    }
+
+                                    generate_token(token_info.getString("app_token"),token_info.getString("user_id"),devices);
+
+                                } catch (JSONException e) {
+                                    LOG.debug("failure error: "+ e.toString());
+                                }
+
+                                // Do what you want to do with the response.
+                            } else {
+                                LOG.debug("failed but response has been sent: "+ response.toString());
+                                // Request not successful
                             }
                         }
+                    });
+                    //endregion
 
-                        @Override
-                        protected Response<String> parseNetworkResponse(NetworkResponse response) {
-                            String responseString = "";
-                            if (response != null) {
-                                responseString = String.valueOf(response.statusCode);
-                                // can get more details such as response.headers
-                            }
-                            return Response.success(responseString, HttpHeaderParser.parseCacheHeaders(response));
-                        }
-                    };
-                    requestQueue.add(stringRequest);
 
-                    }  catch (Exception e) {
+                    }
+
+                catch (Exception e) {
                     throw new RuntimeException(e);
                 }
 
-                //keygenresult.setText(getcode);
             }
         }
         else{
             //no need bcoz xiaomi focus
         }
     }
+    private void generate_token(String apptoken, String userid, String url_device){
+        String url_device_ = String.format(url_device,userid);
+        LOG.debug(url_device_);
+        getToken(url_device_, apptoken, new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                LOG.debug("failure error: "+ e.toString());
+            }
 
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                if (response.isSuccessful()) {
+                    String responseStr = response.body().string();
+                    LOG.debug("response: "+ responseStr.toString());
+                    try {
+                        JSONObject jobj = new JSONObject(responseStr);
+                        JSONArray items = jobj.getJSONArray("items");
+                        Map<String, String> data = new HashMap<>();
+                        for(int i = 0; i < items.length(); i++){
+                            JSONObject device_info = new JSONObject(items.getJSONObject(i).getString("additionalInfo"));
+                            data.put("active_status",items.getJSONObject(i).getString("activeStatus"));
+                            data.put("auth_key",String.format("0x%s",device_info.getString("auth_key")));
+                            data.put("mac_address",items.getJSONObject(i).getString("macAddress"));
+                            data.put("device_source",items.getJSONObject(i).getString("deviceSource"));
+                        }
+                        //!!Only last key provided by the server is displayed!!
+                        LOG.debug("response: "+ data.toString());
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                keygenresult.setText(data.get("auth_key"));
+                            }
+                        });
+                    } catch (JSONException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+                else{
+                    LOG.debug("failed but response has been sent: "+ response.toString());
+                }
+
+            }
+        });
+    }
+
+
+    public static final MediaType URLENCODED = MediaType.parse("application/x-www-form-urlencoded");
+
+    OkHttpClient client = new OkHttpClient();
+
+    Call post(String url, String requests, Callback callback) {
+        RequestBody body = RequestBody.create(requests,URLENCODED);
+        Request request = new Request.Builder()
+                .url(url)
+                .method("POST", body)
+                .build();
+        Call call = client.newCall(request);
+        call.enqueue(callback);
+        return call;
+    }
+
+    Call getToken(String url,  String apptoken, Callback callback ) {
+        Request request = new Request.Builder()
+                .url(url)
+                .get()
+                .addHeader("Content-Type", "application/x-www-form-urlencoded")
+                .addHeader("apptoken", apptoken)
+                .build();
+        Call call = client.newCall(request);
+        call.enqueue(callback);
+        return call;
+    }
 
 
 
