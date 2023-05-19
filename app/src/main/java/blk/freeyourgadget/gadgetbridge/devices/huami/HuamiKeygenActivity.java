@@ -33,6 +33,7 @@ import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -60,6 +61,7 @@ import blk.freeyourgadget.gadgetbridge.R;
 import blk.freeyourgadget.gadgetbridge.activities.AbstractGBActivity;
 import blk.freeyourgadget.gadgetbridge.activities.DiscoveryActivity;
 import blk.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
+import blk.freeyourgadget.gadgetbridge.impl.GBDevice;
 import blk.freeyourgadget.gadgetbridge.impl.GBDeviceCandidate;
 import blk.freeyourgadget.gadgetbridge.util.GB;
 import okhttp3.Call;
@@ -80,6 +82,7 @@ public class HuamiKeygenActivity  extends AbstractGBActivity  {
     private TextView flavortextusername;
     private TextView flavortextpassword;
     private Button buttonxiaomilogin;
+    private ProgressBar loadinggenerating;
     private Switch huamimodeSwitch;
     private GBDeviceCandidate deviceCandidate;
     private static final Logger LOG = LoggerFactory.getLogger(DiscoveryActivity.class);
@@ -205,13 +208,19 @@ public class HuamiKeygenActivity  extends AbstractGBActivity  {
  */
 
     protected void onCreate(Bundle savedInstanceState) {
+        GBDevice gbDevice;
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_huami_token_gen);
         message = findViewById(R.id.miband_keygen_mode);
+        loadinggenerating = findViewById(R.id.progressGenerating);
+        loadinggenerating.setProgress(0);
+        loadinggenerating.setIndeterminate(true);
         keygenresult = findViewById(R.id.miband_keygen_result);
         huamimodeSwitch = findViewById(R.id.switch_mode_amazfit_huami);
         buttonxiaomilogin = findViewById(R.id.button_login_miband);
+        huamimodeSwitch.setChecked(true);
+        huamimodeSwitch.setVisibility(View.GONE);
         //startup value
         if (huamimodeSwitch.isChecked()){
             message.setText(R.string.devicetype_miband);
@@ -237,15 +246,6 @@ public class HuamiKeygenActivity  extends AbstractGBActivity  {
             flavortextusername.setVisibility(View.VISIBLE);
             flavortextpassword.setVisibility(View.VISIBLE);
             buttonxiaomilogin.setVisibility(View.GONE);
-        }
-        Intent intent = getIntent();
-
-        deviceCandidate = intent.getParcelableExtra(DeviceCoordinator.EXTRA_DEVICE_CANDIDATE);
-        if (deviceCandidate == null && savedInstanceState != null) {
-            deviceCandidate = savedInstanceState.getParcelable(STATE_DEVICE_CANDIDATE);
-        }
-        if (deviceCandidate == null) {
-            Toast.makeText(this, getString(R.string.message_cannot_pair_no_mac), Toast.LENGTH_SHORT).show();
         }
 
 
@@ -316,6 +316,7 @@ public class HuamiKeygenActivity  extends AbstractGBActivity  {
     }
 
     private void fetch_xiaomi_token(@NonNull String uri){
+        loadinggenerating.setVisibility(View.VISIBLE);
         if(uri.isEmpty()==false){
             Uri uri_link=Uri.parse(uri);//parse URL
             String getcode = uri_link.getQueryParameter("code");
@@ -365,36 +366,50 @@ public class HuamiKeygenActivity  extends AbstractGBActivity  {
                                     if (jobj.has("error_code")){
                                         GB.toast(getBaseContext(), "LOGIN ERROR: "+ error_map.get(jobj.get("error_code").toString()), 2000, ERROR);
                                         LOG.debug("error logging in");
+                                        loadinggenerating.setVisibility(View.GONE);
+
                                     }
 
                                     if (!jobj.has("token_info")){
                                         GB.toast(getBaseContext(), "LOGIN ERROR: token_info is missing", 2000, ERROR);
                                         LOG.debug("missing: token_info");
+                                        loadinggenerating.setVisibility(View.GONE);
+
                                     }
 
                                     JSONObject token_info = jobj.getJSONObject("token_info");
                                     if(!token_info.has("app_token")){
                                         GB.toast(getBaseContext(), "LOGIN ERROR: app_token is missing", 2000, ERROR);
                                         LOG.debug("missing: app_token");
-
+                                        loadinggenerating.setVisibility(View.GONE);
                                     }
                                     if(!token_info.has("login_token")){
                                         GB.toast(getBaseContext(), "LOGIN ERROR: login_token is missing", 2000, ERROR);
                                         LOG.debug("missing: login_token");
+                                        loadinggenerating.setVisibility(View.GONE);
+
                                     }
                                     if(!token_info.has("user_id")){
                                         GB.toast(getBaseContext(), "LOGIN ERROR: user_id is missing", 2000, ERROR);
                                         LOG.debug("missing: user_id");
+                                        loadinggenerating.setVisibility(View.GONE);
+
                                     }
 
                                     generate_token(token_info.getString("app_token"),token_info.getString("user_id"),devices);
 
                                 } catch (JSONException e) {
+                                    Toast.makeText(getBaseContext(), ("Error: "+ e.toString()), Toast.LENGTH_SHORT).show();
+                                    loadinggenerating.setVisibility(View.GONE);
+
                                     LOG.debug("failure error: "+ e.toString());
                                 }
 
                                 // Do what you want to do with the response.
                             } else {
+                                Toast.makeText(getBaseContext(), ("Failed: "+ response.toString()), Toast.LENGTH_SHORT).show();
+                                loadinggenerating.setVisibility(View.GONE);
+
                                 LOG.debug("failed but response has been sent: "+ response.toString());
                                 // Request not successful
                             }
@@ -421,7 +436,8 @@ public class HuamiKeygenActivity  extends AbstractGBActivity  {
         getToken(url_device_, apptoken, new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                LOG.debug("failure error: "+ e.toString());
+                Toast.makeText(getBaseContext(), ("Error: "+ e.toString()), Toast.LENGTH_SHORT).show();
+                LOG.debug("Error: "+ e.toString());
             }
 
             @Override
@@ -442,14 +458,21 @@ public class HuamiKeygenActivity  extends AbstractGBActivity  {
                         }
                         //!!Only last key provided by the server is displayed!!
                         LOG.debug("response: "+ data.toString());
+
+
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
+                                Toast.makeText(getBaseContext(), "Successfully generating the key", Toast.LENGTH_SHORT).show();
                                 keygenresult.setText(data.get("auth_key"));
+                                loadinggenerating.setVisibility(View.GONE);
+
                             }
                         });
                     } catch (JSONException e) {
+                        loadinggenerating.setVisibility(View.GONE);
                         throw new RuntimeException(e);
+
                     }
                 }
                 else{
