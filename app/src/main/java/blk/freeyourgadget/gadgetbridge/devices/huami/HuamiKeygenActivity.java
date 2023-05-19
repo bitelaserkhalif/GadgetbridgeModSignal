@@ -402,9 +402,10 @@ public class HuamiKeygenActivity  extends AbstractGBActivity  {
                                         loadinggenerating.setVisibility(View.GONE);
 
                                     }
-
-                                    generate_token(token_info.getString("app_token"),token_info.getString("user_id"),devices);
-
+                                    if(token_info.has("login_token")&&token_info.has("login_token")&&token_info.has("user_id")){
+                                        generate_token(token_info.getString("app_token"),token_info.getString("user_id"),devices);
+                                        logoutXiaomi(token_info.getString("login_token"));
+                                    }
                                 } catch (JSONException e) {
                                     Toast.makeText(getBaseContext(), ("Error: "+ e.toString()), Toast.LENGTH_SHORT).show();
                                     loadinggenerating.setVisibility(View.GONE);
@@ -437,6 +438,51 @@ public class HuamiKeygenActivity  extends AbstractGBActivity  {
             //no need bcoz xiaomi focus
         }
     }
+
+    private void logoutXiaomi(String login_token) {
+        String logout_url = url_map.get("logout");//normal
+//region submit logout
+        LOG.debug("logging out"
+        );
+        String requests = String.format("login_token=%s",
+                login_token)
+                ;
+        post(logout_url, requests, new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                LOG.debug("failure error: "+ e.toString());
+                // Something went wrong
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if (response.isSuccessful()) {
+                    String responseStr = response.body().string();
+                    try {
+                        JSONObject jobj = new JSONObject(responseStr);
+                        LOG.debug("testing: "+ jobj.toString());
+
+
+                    } catch (JSONException e) {
+                        Toast.makeText(getBaseContext(), ("Error: "+ e.toString()), Toast.LENGTH_SHORT).show();
+                        loadinggenerating.setVisibility(View.GONE);
+
+                        LOG.debug("failure error: "+ e.toString());
+                    }
+
+                    // Do what you want to do with the response.
+                } else {
+                    Toast.makeText(getBaseContext(), ("Failed: "+ response.toString()), Toast.LENGTH_SHORT).show();
+                    loadinggenerating.setVisibility(View.GONE);
+
+                    LOG.debug("failed but response has been sent: "+ response.toString());
+                    // Request not successful
+                }
+            }
+        });
+        //endregion
+    }
+
     private void generate_token(String apptoken, String userid, String url_device){
         String url_device_ = String.format(url_device,userid);
         LOG.debug(url_device_);
