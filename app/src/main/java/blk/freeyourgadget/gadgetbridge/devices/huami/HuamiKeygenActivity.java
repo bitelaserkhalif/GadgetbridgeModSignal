@@ -24,9 +24,13 @@ import static blk.freeyourgadget.gadgetbridge.util.BondingUtil.STATE_DEVICE_CAND
 import static blk.freeyourgadget.gadgetbridge.util.GB.ERROR;
 
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.InputType;
 import android.util.Log;
 import android.view.View;
 import android.webkit.WebView;
@@ -217,6 +221,9 @@ public class HuamiKeygenActivity  extends AbstractGBActivity  {
         loadinggenerating.setProgress(0);
         loadinggenerating.setIndeterminate(true);
         keygenresult = findViewById(R.id.miband_keygen_result);
+        keygenresult.setInputType(InputType.TYPE_NULL);
+        keygenresult.setTextIsSelectable(true);
+        keygenresult.setKeyListener(null);
         huamimodeSwitch = findViewById(R.id.switch_mode_amazfit_huami);
         buttonxiaomilogin = findViewById(R.id.button_login_miband);
         huamimodeSwitch.setChecked(true);
@@ -442,6 +449,7 @@ public class HuamiKeygenActivity  extends AbstractGBActivity  {
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                ClipboardManager clipboard = (ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);
                 if (response.isSuccessful()) {
                     String responseStr = response.body().string();
                     LOG.debug("response: "+ responseStr.toString());
@@ -463,7 +471,11 @@ public class HuamiKeygenActivity  extends AbstractGBActivity  {
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                Toast.makeText(getBaseContext(), "Successfully generating the key", Toast.LENGTH_SHORT).show();
+
+                                ClipData clip = ClipData.newPlainText("auth_key",data.get("auth_key"));
+                                clipboard.setPrimaryClip(clip);
+                                Toast.makeText(getBaseContext(), "Successfully generating the key and copied to clipboard", Toast.LENGTH_SHORT).show();
+
                                 keygenresult.setText(data.get("auth_key"));
                                 loadinggenerating.setVisibility(View.GONE);
 

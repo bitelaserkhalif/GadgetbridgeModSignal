@@ -107,6 +107,8 @@
 
     <EditText
         android:id="@+id/miband_keygen_result"
+        android:inputType="none"
+        android:textIsSelectable="true"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="24dp"
@@ -115,7 +117,6 @@
         android:layout_marginBottom="70dp"
         android:ems="10"
         android:hint="@string/token_keygen_result"
-        android:inputType="none"
         android:minHeight="48dp"
         app:layout_constraintBottom_toTopOf="@+id/button_get_token"
         app:layout_constraintEnd_toEndOf="parent"
