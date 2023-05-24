@@ -681,7 +681,7 @@
             android:parentActivityName="blk.freeyourgadget.gadgetbridge.devices.huami.HuamiKeygenActivity" />
         <activity
             android:name="blk.freeyourgadget.gadgetbridge.activities.EmergencyHRActivity"
-            android:label="@string/miband_pref_title_keygen"
+            android:label="@string/emergencyhr_detail_activity_title"
             android:parentActivityName="blk.freeyourgadget.gadgetbridge.activities.EmergencyHRActivity" />
         <activity
             android:name="blk.freeyourgadget.gadgetbridge.devices.huami.HuamiBrowserActivity"

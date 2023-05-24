@@ -90,6 +90,7 @@ import blk.freeyourgadget.gadgetbridge.activities.BatteryInfoActivity;
 import blk.freeyourgadget.gadgetbridge.activities.ConfigureAlarms;
 import blk.freeyourgadget.gadgetbridge.activities.ConfigureReminders;
 import blk.freeyourgadget.gadgetbridge.activities.ControlCenterv2;
+import blk.freeyourgadget.gadgetbridge.activities.EmergencyHRActivity;
 import blk.freeyourgadget.gadgetbridge.activities.HeartRateDialog;
 import blk.freeyourgadget.gadgetbridge.activities.OpenFwAppInstallerActivity;
 import blk.freeyourgadget.gadgetbridge.activities.VibrationActivity;
@@ -380,7 +381,6 @@ public class GBDeviceAdapterv2 extends ListAdapter<GBDevice, GBDeviceAdapterv2.V
                 holder.heartRateStatusLabel.setVisibility(View.VISIBLE);
             }
         }
-
         holder.heartRateStatusBox.setOnClickListener(new View.OnClickListener() {
                                                          @Override
                                                          public void onClick(View v) {
@@ -390,6 +390,27 @@ public class GBDeviceAdapterv2 extends ListAdapter<GBDevice, GBDeviceAdapterv2.V
                                                          }
                                                      }
         );
+
+        holder.heartRateEmergencyStatusBox.setVisibility((device.isInitialized() && coordinator.supportsRealtimeData() && coordinator.supportsManualHeartRateMeasurement(device)) ? View.VISIBLE : View.GONE);
+        holder.heartRateEmergencyStatusBox.setOnClickListener(new View.OnClickListener() {
+                                                         @Override
+                                                         public void onClick(View v) {
+                                                             //Implementasi detak jantung mulai disini
+                                                             Toast.makeText(context, "testing before adding a function", Toast.LENGTH_SHORT).show();
+
+                                                             Intent startIntent;
+                                                             startIntent = new Intent(context, EmergencyHRActivity.class);
+                                                             startIntent.putExtra(GBDevice.EXTRA_DEVICE, device);
+                                                             context.startActivity(startIntent);
+
+                                                             //GBApplication.deviceService(device).onHeartRateTest();
+                                                             //HeartRateDialog dialog = new HeartRateDialog(context);
+                                                             //dialog.show();
+                                                         }
+                                                     }
+        );
+
+
 
         //device specific settings
         holder.deviceSpecificSettingsView.setVisibility(coordinator.getSupportedDeviceSpecificSettings(device)  != null ? View.VISIBLE : View.GONE);
@@ -1138,8 +1159,11 @@ public class GBDeviceAdapterv2 extends ListAdapter<GBDevice, GBDeviceAdapterv2.V
         ImageView showActivityTracks;
         ImageView calibrateDevice;
         LinearLayout heartRateStatusBox;
+        LinearLayout heartRateEmergencyStatusBox;
         ImageView heartRateIcon;
+        ImageView heartRateEmergencyIcon;
         TextView heartRateStatusLabel;
+        TextView heartRateEmergencyStatusLabel;
         FlexboxLayout infoIcons;
 
 
@@ -1207,6 +1231,9 @@ public class GBDeviceAdapterv2 extends ListAdapter<GBDevice, GBDeviceAdapterv2.V
             heartRateStatusBox = view.findViewById(R.id.device_heart_rate_status_box);
             heartRateStatusLabel = view.findViewById(R.id.heart_rate_status);
             heartRateIcon = view.findViewById(R.id.device_heart_rate_status);
+            heartRateEmergencyStatusBox = view.findViewById(R.id.device_heart_rate_emergency_status_box);
+            heartRateEmergencyStatusLabel = view.findViewById(R.id.heart_rate_status);
+            heartRateEmergencyIcon = view.findViewById(R.id.device_heart_rate_emergency_status);
             infoIcons = view.findViewById(R.id.device_info_icons);
 
             cardViewActivityCardLayout = view.findViewById(R.id.card_view_activity_card_layout);

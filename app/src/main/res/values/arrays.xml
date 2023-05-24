@@ -127,6 +127,15 @@
         <item>2</item>
     </string-array>
 
+    <string-array name="pref_emergency_hr">
+        <item>@string/pref_emergency_hr_smart</item>
+        <item>@string/pref_emergency_hr_readmax</item>
+    </string-array>
+    <string-array name="pref_emergency_hr_values">
+        <item>@string/pref_emergency_hr_value_smart</item>
+        <item>@string/pref_emergency_hr_value_readmax</item>
+    </string-array>
+
     <string-array name="gender">
         <item name="1">@string/male</item>
         <item name="0">@string/female</item>

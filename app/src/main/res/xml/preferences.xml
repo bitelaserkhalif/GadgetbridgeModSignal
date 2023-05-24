@@ -110,6 +110,16 @@
         android:key="pref_charts"
         android:title="@string/activity_prefs_charts" />
 
+    <PreferenceScreen android:title="@string/pref_title_emergency_hr">
+        <ListPreference
+            android:defaultValue="@string/pref_theme_value_light"
+            android:entries="@array/pref_emergency_hr"
+            android:entryValues="@array/pref_emergency_hr_values"
+            android:key="pref_emergency_hr_max_value"
+            android:summary="%s"
+            android:title="@string/pref_hr_max_theme" />
+    </PreferenceScreen>
+
     <PreferenceCategory
         android:key="pref_key_datetime"
         android:title="@string/pref_header_datetime">

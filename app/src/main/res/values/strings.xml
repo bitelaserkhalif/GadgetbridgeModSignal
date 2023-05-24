@@ -2019,4 +2019,9 @@
     <string name="toast_browser_xiaomi_page">A browser page would open, you must sign in using Xiaomi Account.</string>
     <string name="devicetype_amazfit">Amazfit</string>
     <string name="token_keygen_result">Token result</string>
+    <string name="emergencyhr_detail_activity_title">Emergency HR monitor</string>
+    <string name="pref_title_emergency_hr">Emergency HR Response</string>
+    <string name="pref_emergency_hr_smart">Smart HR detect (based upon birthdate)</string>
+    <string name="pref_emergency_hr_readmax">Read configured per-device max value</string>
+    <string name="pref_hr_max_theme">Maximum HR detection</string>
 </resources>
