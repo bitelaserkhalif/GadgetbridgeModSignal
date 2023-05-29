@@ -123,6 +123,7 @@
 
     <item name="pref_emergency_hr_value_smart" translatable="false" type="string">smart</item>
     <item name="pref_emergency_hr_value_readmax" translatable="false" type="string">readmax</item>
+    <item name="pref_emergency_hr_value_manual" translatable="false" type="string">manual</item>
 
     <item name="pref_theme_value_system" translatable="false" type="string">system</item>
     <item name="pref_theme_value_light" translatable="false" type="string">light</item>

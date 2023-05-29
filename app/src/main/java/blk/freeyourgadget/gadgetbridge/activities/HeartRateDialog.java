@@ -120,6 +120,7 @@ public class HeartRateDialog extends Dialog {
         setOnCancelListener(new DialogInterface.OnCancelListener() {
             @Override
             public void onCancel(DialogInterface dialogInterface) {
+                LOG.debug("CANCELED");
                 LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(mReceiver);
                 getContext().unregisterReceiver(mReceiver);
             }

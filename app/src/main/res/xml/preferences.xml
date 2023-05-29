@@ -15,13 +15,6 @@
             android:title="@string/pref_title_general_autoconnectonbluetooth" />
         <CheckBoxPreference
             android:layout="@layout/preference_checkbox"
-            android:defaultValue="false"
-            android:key="general_autocreconnect"
-            android:title="@string/pref_title_general_autoreconnect"
-            android:enabled="false"
-            android:summary="setting has been moved to device specific settings"/>
-        <CheckBoxPreference
-            android:layout="@layout/preference_checkbox"
             android:defaultValue="true"
             android:key="display_add_device_fab"
             android:summaryOff="@string/pref_display_add_device_fab_off"
@@ -111,13 +104,35 @@
         android:title="@string/activity_prefs_charts" />
 
     <PreferenceScreen android:title="@string/pref_title_emergency_hr">
+        <CheckBoxPreference
+            android:layout="@layout/preference_checkbox"
+            android:defaultValue="false"
+            android:key="pref_emergency_hr_enable"
+            android:summary="@string/pref_summary_enable_emergency_hr"
+            android:title="@string/pref_hr_enabled" />
         <ListPreference
-            android:defaultValue="@string/pref_theme_value_light"
+            android:dependency="pref_emergency_hr_enable"
+            android:defaultValue="@string/pref_emergency_hr_value_readmax"
             android:entries="@array/pref_emergency_hr"
             android:entryValues="@array/pref_emergency_hr_values"
-            android:key="pref_emergency_hr_max_value"
+            android:key="pref_emergency_hr_type"
             android:summary="%s"
-            android:title="@string/pref_hr_max_theme" />
+            android:title="@string/pref_title_emergency_hr_type" />
+        <EditTextPreference
+            android:dependency="pref_emergency_hr_enable"
+            android:defaultValue="45"
+            android:inputType="number"
+            android:key="emergency_hr_min"
+            android:maxLength="3"
+            android:title="@string/activity_prefs_alarm_min_heart_rate" />
+        <EditTextPreference
+            android:dependency="pref_emergency_hr_enable"
+            android:defaultValue="150"
+            android:inputType="number"
+            android:key="emergency_hr_max"
+            android:maxLength="3"
+            android:title="@string/activity_prefs_alarm_max_heart_rate" />
+
     </PreferenceScreen>
 
     <PreferenceCategory

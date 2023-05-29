@@ -17,6 +17,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package blk.freeyourgadget.gadgetbridge.adapter;
 
+import static blk.freeyourgadget.gadgetbridge.GBApplication.getPrefs;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
@@ -392,12 +394,24 @@ public class GBDeviceAdapterv2 extends ListAdapter<GBDevice, GBDeviceAdapterv2.V
         );
 
         holder.heartRateEmergencyStatusBox.setVisibility((device.isInitialized() && coordinator.supportsRealtimeData() && coordinator.supportsManualHeartRateMeasurement(device)) ? View.VISIBLE : View.GONE);
+        if (parent.getContext() instanceof ControlCenterv2) {
+            ActivitySample sample = ((ControlCenterv2) parent.getContext()).getCurrentHRSample();
+            if (sample != null) {
+                holder.heartRateEmergencyStatusLabel.setText(String.valueOf(sample.getHeartRate()));
+            } else {
+                holder.heartRateEmergencyStatusLabel.setText("");
+            }
+
+            // Hide the level, if it has no text
+            if (TextUtils.isEmpty(holder.heartRateEmergencyStatusLabel.getText())) {
+                holder.heartRateEmergencyStatusLabel.setVisibility(View.GONE);
+            } else {
+                holder.heartRateEmergencyStatusLabel.setVisibility(View.VISIBLE);
+            }
+        }
         holder.heartRateEmergencyStatusBox.setOnClickListener(new View.OnClickListener() {
                                                          @Override
                                                          public void onClick(View v) {
-                                                             //Implementasi detak jantung mulai disini
-                                                             Toast.makeText(context, "testing before adding a function", Toast.LENGTH_SHORT).show();
-
                                                              Intent startIntent;
                                                              startIntent = new Intent(context, EmergencyHRActivity.class);
                                                              startIntent.putExtra(GBDevice.EXTRA_DEVICE, device);

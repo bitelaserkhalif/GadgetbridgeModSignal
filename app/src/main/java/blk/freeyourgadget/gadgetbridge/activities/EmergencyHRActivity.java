@@ -1,8 +1,7 @@
 package blk.freeyourgadget.gadgetbridge.activities;
 
 import static blk.freeyourgadget.gadgetbridge.GBApplication.getContext;
-import static blk.freeyourgadget.gadgetbridge.activities.HeartRateUtils.MAX_HEART_RATE_VALUE;
-import static blk.freeyourgadget.gadgetbridge.activities.HeartRateUtils.MIN_HEART_RATE_VALUE;
+import static blk.freeyourgadget.gadgetbridge.GBApplication.getPrefs;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -35,7 +34,6 @@ import blk.freeyourgadget.gadgetbridge.model.ActivitySample;
 import blk.freeyourgadget.gadgetbridge.model.ActivityUser;
 import blk.freeyourgadget.gadgetbridge.model.DeviceService;
 import blk.freeyourgadget.gadgetbridge.util.GB;
-import blk.freeyourgadget.gadgetbridge.util.GBPrefs;
 import blk.freeyourgadget.gadgetbridge.util.Prefs;
 
 public class EmergencyHRActivity extends AbstractGBActivity  {
@@ -51,23 +49,50 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
     final int birthYear = activityUser.getYearOfBirth();
     Button EmergencyHRActivityButton;
     private ScheduledExecutorService pulseScheduler;
-    Map<String, Number> heart_rate_threshold = updateSmartHeartRatePreferences();
+    Map<String, Number> heart_rate_threshold = updateHeartRateThreshold();
 
-    public Map<String, Number> updateSmartHeartRatePreferences(){
+    public static final String P_HR_SMART;
+    public static final String P_HR_MANUAL;
+    public static final String P_HR_READMAX;
+
+
+    static {
+        Context CONTEXT = GBApplication.getContext();
+        P_HR_SMART = CONTEXT.getString(R.string.pref_emergency_hr_value_smart);
+        P_HR_MANUAL = CONTEXT.getString(R.string.pref_emergency_hr_value_manual);
+        P_HR_READMAX = CONTEXT.getString(R.string.pref_emergency_hr_value_readmax);
+    }
+
+    public Map<String, Number> updateHeartRateThreshold(){
         Map<String, Number> hrvalues = new HashMap<>();
         Prefs prefs = GBApplication.getPrefs();
-        prefs.getString("pref_emergency_hr_max_value","smart");
-        if (birthYear==0){
-            LOG.debug("birthYear not set | get value from heartrate_alert_threshold");
-
-            hrvalues.put("maxHeartRateValue",prefs.getInt(DeviceSettingsPreferenceConst.PREF_HEARTRATE_ALERT_HIGH_THRESHOLD, 150));
-            hrvalues.put("minHeartRateValue",prefs.getInt(DeviceSettingsPreferenceConst.PREF_HEARTRATE_ALERT_LOW_THRESHOLD, 45));
+        String GetHRType = prefs.getString("pref_emergency_hr_type","smart");
+        if (GetHRType.equals(P_HR_SMART)){
+            //SMART TYPE = detect by age
+            LOG.debug("hr is smart");
+            if (birthYear==0){//failsafe if invalid
+                LOG.debug("birthYear not set | get value from heartrate_alert_threshold");
+                hrvalues.put("maxHeartRateValue",getMaxHeartRate());
+                hrvalues.put("minHeartRateValue",getMinHeartRate());
+            }
+            else{
+                LOG.debug("birthYear: "+String.valueOf(birthYear));
+                hrvalues.put("maxHeartRateValue",getMaxHeartRateSmart());
+                hrvalues.put("minHeartRateValue",getMinHeartRate());
+                //add smart system here.
+            }
         }
-        else{
-            LOG.debug("birthYear: "+String.valueOf(birthYear));
-            hrvalues.put("maxHeartRateValue",getMaxHeartRateSmart());
+        else if (GetHRType.equals(P_HR_READMAX)){
+            //per device type HR LIMIT
+            LOG.debug("hr is per-device max");
+            hrvalues.put("maxHeartRateValue",getMaxHeartRate());
             hrvalues.put("minHeartRateValue",getMinHeartRate());
-            //add smart system here.
+        }
+        else if (GetHRType.equals(P_HR_MANUAL)){
+            LOG.debug("hr is manual");
+            //MANUAL KEY-IN
+            hrvalues.put("maxHeartRateValue",prefs.getInt("emergency_hr_max",150));
+            hrvalues.put("minHeartRateValue",prefs.getInt("emergency_hr_min",45));
         }
         return hrvalues;
     }
@@ -92,6 +117,11 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
         //estimation of current age
         Prefs prefs = GBApplication.getPrefs();
         return prefs.getInt(DeviceSettingsPreferenceConst.PREF_HEARTRATE_ALERT_LOW_THRESHOLD, 45);
+    }
+    public int getMaxHeartRate(){
+        //estimation of current age
+        Prefs prefs = GBApplication.getPrefs();
+        return prefs.getInt(DeviceSettingsPreferenceConst.PREF_HEARTRATE_ALERT_HIGH_THRESHOLD, 150);
     }
 
     final BroadcastReceiver mReceiver = new BroadcastReceiver() {
@@ -137,61 +167,74 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
     }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
-        Intent intent = getIntent();
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(DeviceService.ACTION_REALTIME_SAMPLES);
-        LocalBroadcastManager.getInstance(getContext()).registerReceiver(mReceiver, filter);
-        getContext().registerReceiver(mReceiver, filter);
-        Bundle bundle = intent.getExtras();
-        if (bundle != null) {
-            gbDevice = bundle.getParcelable(GBDevice.EXTRA_DEVICE);
-        } else {
-            throw new IllegalArgumentException("Must provide a device when invoking this activity");
-        }
-        if (birthYear==0){
-            LOG.debug("birthYear not set");
-        }
-        else{
-            LOG.debug("birthYear: "+String.valueOf(birthYear));
-
-        }
-        GBApplication.deviceService(gbDevice).onHeartRateTest();
-        LOG.debug("age: "+String.valueOf(getEstimatedAge()));
-        GB.toast(getBaseContext(), "MAX HR:"+ String.valueOf(heart_rate_threshold.get("maxHeartRateValue")) + " MIN HR: " + String.valueOf(heart_rate_threshold.get("minHeartRateValue")), 2000, 0);
         super.onCreate(savedInstanceState);
+
         final Context appContext = this.getApplicationContext();
-        if (appContext instanceof GBApplication) {
-            setContentView(R.layout.activity_heartrate_emergency);
-        }
-        textHR = findViewById(R.id.textHR);
-        EmergencyHRActivityButton = findViewById(R.id.btnStopHR);
-        pulseScheduler = startActivityPulse();
+        if (getPrefs().getBoolean("pref_emergency_hr_enable",false) == true) {
 
-        EmergencyHRActivityButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                GB.toast(getBaseContext(), "STOP", 2000, 0);
-                stopActivityPulse();
-
+            Intent intent = getIntent();
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(DeviceService.ACTION_REALTIME_SAMPLES);
+            LocalBroadcastManager.getInstance(getContext()).registerReceiver(mReceiver, filter);
+            getContext().registerReceiver(mReceiver, filter);
+            Bundle bundle = intent.getExtras();
+            if (bundle != null) {
+                gbDevice = bundle.getParcelable(GBDevice.EXTRA_DEVICE);
+            } else {
+                throw new IllegalArgumentException("Must provide a device when invoking this activity");
             }
-        });
+            GBApplication.deviceService(gbDevice).onHeartRateTest();
+            GB.toast(getBaseContext(), "MAX HR:" + String.valueOf(heart_rate_threshold.get("maxHeartRateValue")) + " MIN HR: " + String.valueOf(heart_rate_threshold.get("minHeartRateValue")), 2000, 0);
+            if (appContext instanceof GBApplication) {
+                setContentView(R.layout.activity_heartrate_emergency);
+            }
+            textHR = findViewById(R.id.textHR);
+            EmergencyHRActivityButton = findViewById(R.id.btnStopHR);
+            pulseScheduler = startActivityPulse();
 
-    }
+            EmergencyHRActivityButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    GB.toast(getBaseContext(), "STOP", 2000, 0);
+                    stopActivityPulse();
+
+                }
+            });
+        }
+        else if (getPrefs().getBoolean("pref_emergency_hr_enable",false) == false) {
+            if (appContext instanceof GBApplication) {
+                setContentView(R.layout.activity_heartrate_emergency);
+            }
+            textHR = findViewById(R.id.textHR);
+            EmergencyHRActivityButton = findViewById(R.id.btnStopHR);
+            getBaseContext().getString(R.string.on);
+            GB.toast(getBaseContext(), (getBaseContext().getString(R.string.error_hr_disabled)), 2000, 0);
+            textHR.setText(getBaseContext().getString(R.string.error_hr_disabled));
+            EmergencyHRActivityButton.setVisibility(View.GONE);
+        }
+        }
 
     @Override
     protected void onDestroy() {
-        LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(mReceiver);
-        getContext().unregisterReceiver(mReceiver);
         super.onDestroy();
+        LOG.debug("destroyed");
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mReceiver);
     }
     private void setMeasurementResults(Serializable result) {
 
         if (result instanceof ActivitySample) {
             ActivitySample sample = (ActivitySample) result;
             textHR.setVisibility(View.VISIBLE);
-            if (HeartRateUtils.getInstance().isValidHeartRateValue(sample.getHeartRate()))
+            if (HeartRateUtils.getInstance().isValidHeartRateValue(sample.getHeartRate())){
+                //if (sample.getHeartRate()<int.valueOf(updateSmartHeartRatePreferences().get("minHeartRateValue"))){}
+                if (sample.getHeartRate() > heart_rate_threshold.get("maxHeartRateValue").intValue()){
+                    GB.toast(getBaseContext(), "EXCEED", 2000, 0);
+                }
+                if (sample.getHeartRate() < heart_rate_threshold.get("minHeartRateValue").intValue()){
+                    GB.toast(getBaseContext(), "LOW", 2000, 0);
+                }
                 textHR.setText(String.valueOf(sample.getHeartRate()));
+            }
         }
     }
 

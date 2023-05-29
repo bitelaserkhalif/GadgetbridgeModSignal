@@ -130,10 +130,12 @@
     <string-array name="pref_emergency_hr">
         <item>@string/pref_emergency_hr_smart</item>
         <item>@string/pref_emergency_hr_readmax</item>
+        <item>@string/pref_emergency_hr_manual</item>
     </string-array>
     <string-array name="pref_emergency_hr_values">
         <item>@string/pref_emergency_hr_value_smart</item>
         <item>@string/pref_emergency_hr_value_readmax</item>
+        <item>@string/pref_emergency_hr_value_manual</item>
     </string-array>
 
     <string-array name="gender">

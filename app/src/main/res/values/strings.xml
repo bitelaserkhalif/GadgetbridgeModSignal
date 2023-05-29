@@ -2023,5 +2023,9 @@
     <string name="pref_title_emergency_hr">Emergency HR Response</string>
     <string name="pref_emergency_hr_smart">Smart HR detect (based upon birthdate)</string>
     <string name="pref_emergency_hr_readmax">Read configured per-device max value</string>
-    <string name="pref_hr_max_theme">Maximum HR detection</string>
+    <string name="pref_emergency_hr_manual">Manual limit</string>
+    <string name="pref_title_emergency_hr_type">Maximum HR detection</string>
+    <string name="pref_summary_enable_emergency_hr">Enable emergency heart rate detection globally</string>
+    <string name="pref_hr_enabled">Enable emergency HR monitoring</string>
+    <string name="error_hr_disabled">Emergency HR not turned on</string>
 </resources>
