@@ -183,7 +183,7 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
             } else {
                 throw new IllegalArgumentException("Must provide a device when invoking this activity");
             }
-            GBApplication.deviceService(gbDevice).onHeartRateTest();
+            //GBApplication.deviceService(gbDevice).onHeartRateTest();
             GB.toast(getBaseContext(), "MAX HR:" + String.valueOf(heart_rate_threshold.get("maxHeartRateValue")) + " MIN HR: " + String.valueOf(heart_rate_threshold.get("minHeartRateValue")), 2000, 0);
             if (appContext instanceof GBApplication) {
                 setContentView(R.layout.activity_heartrate_emergency);

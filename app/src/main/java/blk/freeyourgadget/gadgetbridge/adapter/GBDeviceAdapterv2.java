@@ -368,19 +368,25 @@ public class GBDeviceAdapterv2 extends ListAdapter<GBDevice, GBDeviceAdapterv2.V
             }
         }
         holder.heartRateStatusBox.setVisibility((device.isInitialized() && coordinator.supportsRealtimeData() && coordinator.supportsManualHeartRateMeasurement(device)) ? View.VISIBLE : View.GONE);
+        holder.heartRateEmergencyStatusBox.setVisibility((device.isInitialized() && coordinator.supportsRealtimeData() && coordinator.supportsManualHeartRateMeasurement(device)) ? View.VISIBLE : View.GONE);
         if (parent.getContext() instanceof ControlCenterv2) {
             ActivitySample sample = ((ControlCenterv2) parent.getContext()).getCurrentHRSample();
             if (sample != null) {
                 holder.heartRateStatusLabel.setText(String.valueOf(sample.getHeartRate()));
+
+                holder.heartRateEmergencyStatusLabel.setText(String.valueOf(sample.getHeartRate()));
             } else {
                 holder.heartRateStatusLabel.setText("");
+                holder.heartRateEmergencyStatusLabel.setText("");
             }
 
             // Hide the level, if it has no text
-            if (TextUtils.isEmpty(holder.heartRateStatusLabel.getText())) {
+            if (TextUtils.isEmpty(holder.heartRateStatusLabel.getText()) || TextUtils.isEmpty(holder.heartRateEmergencyStatusLabel.getText()) ) {
                 holder.heartRateStatusLabel.setVisibility(View.GONE);
+                holder.heartRateEmergencyStatusLabel.setVisibility(View.GONE);
             } else {
                 holder.heartRateStatusLabel.setVisibility(View.VISIBLE);
+                holder.heartRateEmergencyStatusLabel.setVisibility(View.VISIBLE);
             }
         }
         holder.heartRateStatusBox.setOnClickListener(new View.OnClickListener() {
@@ -393,31 +399,15 @@ public class GBDeviceAdapterv2 extends ListAdapter<GBDevice, GBDeviceAdapterv2.V
                                                      }
         );
 
-        holder.heartRateEmergencyStatusBox.setVisibility((device.isInitialized() && coordinator.supportsRealtimeData() && coordinator.supportsManualHeartRateMeasurement(device)) ? View.VISIBLE : View.GONE);
-        if (parent.getContext() instanceof ControlCenterv2) {
-            ActivitySample sample = ((ControlCenterv2) parent.getContext()).getCurrentHRSample();
-            if (sample != null) {
-                holder.heartRateEmergencyStatusLabel.setText(String.valueOf(sample.getHeartRate()));
-            } else {
-                holder.heartRateEmergencyStatusLabel.setText("");
-            }
-
-            // Hide the level, if it has no text
-            if (TextUtils.isEmpty(holder.heartRateEmergencyStatusLabel.getText())) {
-                holder.heartRateEmergencyStatusLabel.setVisibility(View.GONE);
-            } else {
-                holder.heartRateEmergencyStatusLabel.setVisibility(View.VISIBLE);
-            }
-        }
         holder.heartRateEmergencyStatusBox.setOnClickListener(new View.OnClickListener() {
                                                          @Override
                                                          public void onClick(View v) {
                                                              Intent startIntent;
+                                                             GBApplication.deviceService(device).onHeartRateTest();
                                                              startIntent = new Intent(context, EmergencyHRActivity.class);
                                                              startIntent.putExtra(GBDevice.EXTRA_DEVICE, device);
                                                              context.startActivity(startIntent);
 
-                                                             //GBApplication.deviceService(device).onHeartRateTest();
                                                              //HeartRateDialog dialog = new HeartRateDialog(context);
                                                              //dialog.show();
                                                          }
@@ -1246,7 +1236,7 @@ public class GBDeviceAdapterv2 extends ListAdapter<GBDevice, GBDeviceAdapterv2.V
             heartRateStatusLabel = view.findViewById(R.id.heart_rate_status);
             heartRateIcon = view.findViewById(R.id.device_heart_rate_status);
             heartRateEmergencyStatusBox = view.findViewById(R.id.device_heart_rate_emergency_status_box);
-            heartRateEmergencyStatusLabel = view.findViewById(R.id.heart_rate_status);
+            heartRateEmergencyStatusLabel = view.findViewById(R.id.heart_rate_emergency_status);
             heartRateEmergencyIcon = view.findViewById(R.id.device_heart_rate_emergency_status);
             infoIcons = view.findViewById(R.id.device_info_icons);
 
