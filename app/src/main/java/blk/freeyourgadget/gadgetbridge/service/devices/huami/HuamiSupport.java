@@ -4108,6 +4108,10 @@ public abstract class HuamiSupport extends AbstractBTLEDeviceSupport implements 
         return GBApplication.getDeviceSpecificSharedPrefs(gbDevice.getAddress()).getBoolean("force_new_protocol", false);
     }
 
+    public boolean getEmergencyHRDevice() {
+        return GBApplication.getDeviceSpecificSharedPrefs(gbDevice.getAddress()).getBoolean("emergency_hr_device", false);
+    }
+
     protected HuamiCoordinator getCoordinator() {
         return (HuamiCoordinator) DeviceHelper.getInstance().getCoordinator(gbDevice);
     }

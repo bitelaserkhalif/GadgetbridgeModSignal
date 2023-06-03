@@ -164,10 +164,14 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
             pulseScheduler.shutdownNow();
             pulseScheduler = null;
         }
+        super.onDestroy();
+        LOG.debug("destroyed");
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mReceiver);
     }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        //GBApplication.getDeviceSpecificSharedPrefs(gbDevice.getAddress()).getBoolean("emergency_hr_device", false);
 
         final Context appContext = this.getApplicationContext();
         if (getPrefs().getBoolean("pref_emergency_hr_enable",false) == true) {
@@ -207,7 +211,6 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
             }
             textHR = findViewById(R.id.textHR);
             EmergencyHRActivityButton = findViewById(R.id.btnStopHR);
-            getBaseContext().getString(R.string.on);
             GB.toast(getBaseContext(), (getBaseContext().getString(R.string.error_hr_disabled)), 2000, 0);
             textHR.setText(getBaseContext().getString(R.string.error_hr_disabled));
             EmergencyHRActivityButton.setVisibility(View.GONE);
@@ -217,8 +220,6 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        LOG.debug("destroyed");
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(mReceiver);
     }
     private void setMeasurementResults(Serializable result) {
 
@@ -228,10 +229,12 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
             if (HeartRateUtils.getInstance().isValidHeartRateValue(sample.getHeartRate())){
                 //if (sample.getHeartRate()<int.valueOf(updateSmartHeartRatePreferences().get("minHeartRateValue"))){}
                 if (sample.getHeartRate() > heart_rate_threshold.get("maxHeartRateValue").intValue()){
-                    GB.toast(getBaseContext(), "EXCEED", 2000, 0);
+                    LOG.debug("HR EXCEED");
+                    //GB.toast(getBaseContext(), "EXCEED", 2000, 0);
                 }
                 if (sample.getHeartRate() < heart_rate_threshold.get("minHeartRateValue").intValue()){
-                    GB.toast(getBaseContext(), "LOW", 2000, 0);
+                    LOG.debug("HR LOW");
+                    //GB.toast(getBaseContext(), "LOW", 2000, 0);
                 }
                 textHR.setText(String.valueOf(sample.getHeartRate()));
             }

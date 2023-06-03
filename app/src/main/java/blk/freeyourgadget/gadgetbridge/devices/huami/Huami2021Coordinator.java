@@ -210,6 +210,7 @@ public abstract class Huami2021Coordinator extends HuamiCoordinator {
         settings.add(R.xml.devicesettings_heartrate_sleep_alert_activity_stress_spo2);
         settings.add(R.xml.devicesettings_inactivity_dnd_no_threshold);
         settings.add(R.xml.devicesettings_goal_notification);
+        settings.add(R.xml.devicesettings_emergency_hr);
 
         //
         // Workout

@@ -94,7 +94,7 @@ public class AmazfitCor2Coordinator extends HuamiCoordinator {
                 R.xml.devicesettings_vibrationpatterns,
                 R.xml.devicesettings_wearlocation,
                 R.xml.devicesettings_heartrate_sleep,
-                R.xml.devicesettings_goal_notification,
+                R.xml.devicesettings_emergency_hr,                R.xml.devicesettings_goal_notification,
                 R.xml.devicesettings_timeformat,
                 R.xml.devicesettings_custom_emoji_font,
                 R.xml.devicesettings_liftwrist_display,

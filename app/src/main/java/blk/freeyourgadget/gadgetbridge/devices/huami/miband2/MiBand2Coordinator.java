@@ -85,7 +85,7 @@ public class MiBand2Coordinator extends HuamiCoordinator {
                 R.xml.devicesettings_miband2,
                 R.xml.devicesettings_wearlocation,
                 R.xml.devicesettings_heartrate_sleep,
-                R.xml.devicesettings_goal_notification,
+                R.xml.devicesettings_emergency_hr,                R.xml.devicesettings_goal_notification,
                 R.xml.devicesettings_timeformat,
                 R.xml.devicesettings_donotdisturb_withauto,
                 R.xml.devicesettings_liftwrist_display,

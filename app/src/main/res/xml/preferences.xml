@@ -132,7 +132,15 @@
             android:key="emergency_hr_max"
             android:maxLength="3"
             android:title="@string/activity_prefs_alarm_max_heart_rate" />
-
+        <PreferenceCategory
+            android:key="pref_key_emergency_hr_telno"
+            android:title="@string/pref_header_emergency_contacts">
+            <EditTextPreference
+                android:layout="@layout/preference_checkbox"
+                android:key="emergency_hr_telno1"
+                android:summary="@string/pref_summary_emergency_hr_telno"
+                android:title="@string/pref_title_emergency_hr_telno" />
+        </PreferenceCategory>
     </PreferenceScreen>
 
     <PreferenceCategory

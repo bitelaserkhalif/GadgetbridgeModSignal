@@ -263,7 +263,7 @@ public class MiBandCoordinator extends AbstractBLEDeviceCoordinator {
         return new int[]{
                 R.xml.devicesettings_wearlocation,
                 R.xml.devicesettings_heartrate_sleep,
-                R.xml.devicesettings_lowlatency_fwupdate,
+                R.xml.devicesettings_emergency_hr,                R.xml.devicesettings_lowlatency_fwupdate,
                 R.xml.devicesettings_reserve_alarms_calendar,
                 R.xml.devicesettings_fake_timeoffset
         };

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <SwitchPreference
+        android:defaultValue="false"
+        android:icon="@drawable/ic_heart"
+        android:key="emergency_hr_device"
+        android:summary="@string/pref_hr_enabled_device"
+        android:title="@string/emergencyhr_detail_activity_title" />
+
+</androidx.preference.PreferenceScreen>
