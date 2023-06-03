@@ -7,13 +7,20 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.location.Location;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
+import com.google.i18n.phonenumbers.NumberParseException;
+import com.google.i18n.phonenumbers.PhoneNumberUtil;
+import com.google.i18n.phonenumbers.Phonenumber;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,17 +39,21 @@ import blk.freeyourgadget.gadgetbridge.impl.GBDevice;
 import blk.freeyourgadget.gadgetbridge.model.ActivitySample;
 import blk.freeyourgadget.gadgetbridge.model.ActivityUser;
 import blk.freeyourgadget.gadgetbridge.model.DeviceService;
+import blk.freeyourgadget.gadgetbridge.service.devices.pebble.webview.CurrentPosition;
 import blk.freeyourgadget.gadgetbridge.util.GB;
 import blk.freeyourgadget.gadgetbridge.util.Prefs;
 
 public class EmergencyHRActivity extends AbstractGBActivity  {
     //Activity for heart rate monitoring.
+
+    PhoneNumberUtil phoneNumberUtil = PhoneNumberUtil.getInstance();
     private boolean isHRRunning;// this variable clears up everytime...
     private static final Logger LOG = LoggerFactory.getLogger(EmergencyHRActivity.class);
     TextView textHR;
     GBDevice gbDevice;
     ProgressBar progressHR;
     TextView textFlavourHRLimit;
+    TextView textFlavourHRStatus;
 
     private int maxHeartRateValue;
     private int minHeartRateValue;
@@ -142,40 +153,9 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
         }
     };
 
-/*
-    private void pulse() {
-
-        // have to enable it again and again to keep it measuring
-        GBApplication.deviceService().onEnableRealtimeHeartRateMeasurement(true);
-    }
-    private ScheduledExecutorService startActivityPulse() {
-        ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
-        service.scheduleAtFixedRate(new Runnable() {
-            @Override
-            public void run() {
-                pulse();
-            }
-        }, 0, getPulseIntervalMillis(), TimeUnit.MILLISECONDS);
-        return service;
-    }
-
-    private int getPulseIntervalMillis() {
-        return 1000;
-    }
-
-    private void stopActivityPulse() {
-        if (pulseScheduler != null) {
-            pulseScheduler.shutdownNow();
-            pulseScheduler = null;
-        }
-
-        //LocalBroadcastManager.getInstance(this).unregisterReceiver(mReceiver);
-    }
-    */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        //GBApplication.getDeviceSpecificSharedPrefs(gbDevice.getAddress()).getBoolean("emergency_hr_device", false);
 
         final Context appContext = this.getApplicationContext();
 
@@ -184,6 +164,7 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
         }
         textHR = findViewById(R.id.textHR);
         textFlavourHRLimit = findViewById(R.id.textFlavourHRLimit);
+        textFlavourHRStatus = findViewById(R.id.textFlavourHRStatus);
         btnStartHR = findViewById(R.id.btnStartHR);
         btnStopHR = findViewById(R.id.btnStopHR);
         progressHR = findViewById(R.id.progressHR);
@@ -199,9 +180,6 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
             } else {
                 throw new IllegalArgumentException("Must provide a device when invoking this activity");
             }
-            //GBApplication.deviceService(gbDevice).onHeartRateTest();
-            //GB.toast(getBaseContext(), "MAX HR:" + String.valueOf(heart_rate_threshold.get("maxHeartRateValue")) + " MIN HR: " + String.valueOf(heart_rate_threshold.get("minHeartRateValue")), 2000, 0);
-
             textFlavourHRLimit.setText(
                     "MAX HR:" + String.valueOf(heart_rate_threshold.get("maxHeartRateValue")) + " MIN HR: " + String.valueOf(heart_rate_threshold.get("minHeartRateValue"))
             );
@@ -216,6 +194,8 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
                     //receiverCheck meaning it's true / existent.
                     if(isHRRunning==true) {
                         isHRRunning = false;
+                        textFlavourHRStatus.setText(getString(R.string.stop));
+                        textHR.setText("...");
                         GB.toast(getBaseContext(), "STOP", 2000, 0);
                     }else GB.toast(getBaseContext(), "ALREADY STOP", 2000, 0);
 
@@ -227,6 +207,8 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
                 public void onClick(View view) {
                     if (isHRRunning==false){
                         isHRRunning = true;
+                        textFlavourHRStatus.setText(getString(R.string.start));
+                        textHR.setText("...");
                         GB.toast(getBaseContext(), "START", 2000, 0);
                     }
                     else GB.toast(getBaseContext(), "ALREADY START", 2000, 0);
@@ -236,10 +218,6 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
         }
         else if (getPrefs().getBoolean("pref_emergency_hr_enable",false) == false) {
 
-            GB.toast(getBaseContext(), (getBaseContext().getString(R.string.error_hr_disabled)), 2000, 0);
-            textHR.setText(getBaseContext().getString(R.string.error_hr_disabled));
-            btnStopHR.setVisibility(View.GONE);
-            btnStartHR.setVisibility(View.GONE);
         }
         }
 
@@ -253,20 +231,31 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
     */
     private void enableEmergencyHRTracking(boolean enable) {
         IntentFilter filter = new IntentFilter();
-
+        boolean globalHRMonitor = getPrefs().getBoolean("pref_emergency_hr_enable",false);
         filter.addAction(DeviceService.ACTION_REALTIME_SAMPLES);
-        if (enable && !isHRRunning) {
-            textHR.setText(getString(R.string.start));
-            progressHR.setVisibility(View.VISIBLE);
-            LocalBroadcastManager.getInstance(getContext()).registerReceiver(mReceiver, filter);
-            getContext().registerReceiver(mReceiver, filter);
-            isHRRunning = true;
-        } else if (!enable && isHRRunning) {
-            textHR.setText(getString(R.string.stop));
-            progressHR.setVisibility(View.VISIBLE);
-            LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(mReceiver);
-            getContext().unregisterReceiver(mReceiver);
-            isHRRunning = false;
+        if(globalHRMonitor){
+            if (enable && !isHRRunning) {
+                textHR.setText("Starting..");
+                textFlavourHRStatus.setText(getString(R.string.start));
+                progressHR.setVisibility(View.VISIBLE);
+                LocalBroadcastManager.getInstance(getContext()).registerReceiver(mReceiver, filter);
+                getContext().registerReceiver(mReceiver, filter);
+                isHRRunning = true;
+            } else if (!enable && isHRRunning) {
+                textHR.setText("Stopping..");
+                textFlavourHRStatus.setText(getString(R.string.stop));
+                progressHR.setVisibility(View.VISIBLE);
+                LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(mReceiver);
+                getContext().unregisterReceiver(mReceiver);
+                isHRRunning = false;
+            }
+        }
+        else if(!globalHRMonitor){
+            GB.toast(getBaseContext(), (getBaseContext().getString(R.string.error_hr_disabled)), 2000, 0);
+            textFlavourHRLimit.setText(getBaseContext().getString(R.string.error_hr_disabled));
+            progressHR.setVisibility(View.GONE);
+            btnStopHR.setVisibility(View.GONE);
+            btnStartHR.setVisibility(View.GONE);
         }
         else{
         }
@@ -294,12 +283,13 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
             ActivitySample sample = (ActivitySample) result;
             if (HeartRateUtils.getInstance().isValidHeartRateValue(sample.getHeartRate())){
                 //if (sample.getHeartRate()<int.valueOf(updateSmartHeartRatePreferences().get("minHeartRateValue"))){}
+                LOG.debug("Hr monitor is ongoing");
                 if (sample.getHeartRate() > heart_rate_threshold.get("maxHeartRateValue").intValue()){
-                    LOG.debug("HR EXCEED");
+                    emergencyWarning("HR HIGH");
                     //GB.toast(getBaseContext(), "EXCEED", 2000, 0);
                 }
                 if (sample.getHeartRate() < heart_rate_threshold.get("minHeartRateValue").intValue()){
-                    LOG.debug("HR LOW");
+                    emergencyWarning("HR LOW");
                     //GB.toast(getBaseContext(), "LOW", 2000, 0);
                 }
                 textHR.setText(String.valueOf(sample.getHeartRate()));
@@ -310,5 +300,72 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
             enableEmergencyHRTracking(false);
         }
     }
+    //HR VALUES:
 
+    private void emergencyWarning(String HR){
+        final Location lastKnownLocation = new CurrentPosition().getLastKnownLocation();
+        LOG.debug(HR);
+        //LOG.debug (getPrefs().getString("emergency_hr_telno_cc1","00") + getPrefs().getString("emergency_hr_telno1","0000000000000"));
+        LOG.debug ("VALIDITY OF TELNO: "+ String.valueOf(isTelNoValid(getPrefs().getString("emergency_hr_telno_cc1","00") , getPrefs().getString("emergency_hr_telno1","0000000000000"))));
+        LOG.debug(String.valueOf(lastKnownLocation));
+
+
+        //this is whatsapp sending method. Set to false to prevent spamming
+        sendWAEmergency(getPrefs().getString("emergency_hr_telno_cc1","00"),getPrefs().getString("emergency_hr_telno1","0000000000000"),lastKnownLocation);
+        isHRRunning = false;
+        enableEmergencyHRTracking(false);
+
+    }
+    private boolean isTelNoValid(String countryCode, String telNo){
+        Phonenumber.PhoneNumber number = new Phonenumber.PhoneNumber();
+        try {
+            // the parse method parses the string and
+            // returns a PhoneNumber in the format of
+            // specified region
+            number = phoneNumberUtil.parse("+"+countryCode+telNo,"");
+
+            // this statement prints the type of the phone
+            // number
+            //LOG.debug(String.valueOf(phoneNumberUtil.getNumberType(number)));
+            //LOG.debug(String.valueOf(phoneNumberUtil.getRegionCodeForNumber(number)));
+        }
+        catch (NumberParseException e) {
+            LOG.error("CANNOT PARSE TEL.NO");
+            e.printStackTrace();
+        }
+
+        return phoneNumberUtil.isValidNumber(number);
+        }
+        //OVERLOADING IN PRACTICE: IF ARGUMENT OF WARNING ARE GIVEN, IT'LL BE SHOWN.
+    private void sendWAEmergency(String countryCode, String telNo, @NonNull Location lastKnownLocation){
+        String uri = "http://maps.google.com/maps?saddr=" + lastKnownLocation.getLatitude() + "," + lastKnownLocation.getLongitude();
+        Intent whatsappIntent = new Intent(Intent.ACTION_SEND);
+        whatsappIntent.setType("text/plain");
+        whatsappIntent.setPackage("com.whatsapp");
+        //"+393291876000"
+        whatsappIntent.putExtra("jid","+"+countryCode +telNo + "@s.whatsapp.net");
+        whatsappIntent.putExtra(Intent.EXTRA_TEXT, "EMERGENCY WARNING:");
+        whatsappIntent.putExtra(Intent.EXTRA_TEXT, uri);
+        try {
+            startActivity(whatsappIntent);
+        } catch (android.content.ActivityNotFoundException ex) {
+            GB.toast(getBaseContext(), ("Whatsapp have not been installed."), 2000, GB.WARN);
+        }
+    }
+    private void sendWAEmergency(String countryCode, String telNo, @NonNull Location lastKnownLocation, String reasoning){
+        String uri = "http://maps.google.com/maps?saddr=" + lastKnownLocation.getLatitude() + "," + lastKnownLocation.getLongitude();
+        Intent whatsappIntent = new Intent(Intent.ACTION_SEND);
+        whatsappIntent.setType("text/plain");
+        whatsappIntent.setPackage("com.whatsapp");
+        //"+393291876000"
+        whatsappIntent.putExtra("jid","+"+countryCode +telNo + "@s.whatsapp.net");
+        whatsappIntent.putExtra(Intent.EXTRA_TEXT, "EMERGENCY WARNING:");
+        whatsappIntent.putExtra(Intent.EXTRA_TEXT, reasoning);
+        whatsappIntent.putExtra(Intent.EXTRA_TEXT, uri);
+        try {
+            startActivity(whatsappIntent);
+        } catch (android.content.ActivityNotFoundException ex) {
+            GB.toast(getBaseContext(), ("Whatsapp have not been installed."), 2000, GB.WARN);
+        }
+    }
 }

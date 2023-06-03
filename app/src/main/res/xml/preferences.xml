@@ -135,12 +135,18 @@
         <PreferenceCategory
             android:key="pref_key_emergency_hr_telno"
             android:title="@string/pref_header_emergency_contacts">
-            <EditTextPreference
-                android:layout="@layout/preference_checkbox"
-                android:key="emergency_hr_telno1"
-                android:summary="@string/pref_summary_emergency_hr_telno"
-                android:title="@string/pref_title_emergency_hr_telno" />
-        </PreferenceCategory>
+                 <EditTextPreference
+                    android:inputType="phone"
+                    android:key="emergency_hr_telno_cc1"
+                    android:summary="@string/pref_summary_emergency_hr_telno_country_code"
+                    android:title="@string/pref_title_emergency_hr_telno_cc" />
+                <EditTextPreference
+                    android:inputType="phone"
+                    android:key="emergency_hr_telno1"
+                    android:summary="@string/pref_summary_emergency_hr_telno"
+                    android:title="@string/pref_title_emergency_hr_telno" />
+
+    </PreferenceCategory>
     </PreferenceScreen>
 
     <PreferenceCategory

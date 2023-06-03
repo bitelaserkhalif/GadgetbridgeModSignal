@@ -22,12 +22,15 @@ package blk.freeyourgadget.gadgetbridge.devices.huami;
 
 import static blk.freeyourgadget.gadgetbridge.util.BondingUtil.STATE_DEVICE_CANDIDATE;
 import static blk.freeyourgadget.gadgetbridge.util.GB.ERROR;
+import static blk.freeyourgadget.gadgetbridge.util.GB.toast;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.InputType;
@@ -46,6 +49,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -307,9 +311,19 @@ public class HuamiKeygenActivity  extends AbstractGBActivity  {
 
             }
         });
+        checkAndRequestInternetPermission();
 
 
     }
+
+    private void checkAndRequestInternetPermission() {
+        if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED) {
+            LOG.error("No permission to access internet!");
+            toast(HuamiKeygenActivity.this, getString(R.string.error_no_internet_access), Toast.LENGTH_SHORT, GB.ERROR);
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.INTERNET}, 0);
+        }
+    }
+
     private void get_access_token(boolean isXiaomi){
         if(isXiaomi==true){
             Intent i = new Intent(this, HuamiBrowserActivity.class);
