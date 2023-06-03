@@ -473,8 +473,8 @@
                     android:id="@+id/device_heart_rate_emergency_status_box"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:contentDescription="@string/controlcenter_get_heartrate_measurement"
-                    android:tooltipText="@string/controlcenter_get_heartrate_measurement"
+                    android:contentDescription="@string/controlcenter_get_emergency_heartrate_measurement"
+                    android:tooltipText="@string/controlcenter_get_emergency_heartrate_measurement"
                     android:layout_alignParentStart="true"
                     android:layout_margin="3dp"
                     android:orientation="vertical">

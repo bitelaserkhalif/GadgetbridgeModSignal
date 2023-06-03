@@ -84,6 +84,7 @@ public class QHybridCoordinator extends AbstractBLEDeviceCoordinator {
     }
 
 
+
     @Override
     public boolean supportsActivityDataFetching() {
         List<GBDevice> devices = GBApplication.app().getDeviceManager().getSelectedDevices();
@@ -247,6 +248,7 @@ public class QHybridCoordinator extends AbstractBLEDeviceCoordinator {
         int[] supportedSettings = new int[]{
                 R.xml.devicesettings_fossilhybridhr,
                 R.xml.devicesettings_inactivity,
+                R.xml.devicesettings_emergency_hr,
                 R.xml.devicesettings_autoremove_notifications,
                 R.xml.devicesettings_canned_dismisscall_16,
                 R.xml.devicesettings_transliteration

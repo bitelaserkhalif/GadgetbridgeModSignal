@@ -10,6 +10,7 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -22,9 +23,7 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import blk.freeyourgadget.gadgetbridge.GBApplication;
 import blk.freeyourgadget.gadgetbridge.R;
@@ -38,16 +37,21 @@ import blk.freeyourgadget.gadgetbridge.util.Prefs;
 
 public class EmergencyHRActivity extends AbstractGBActivity  {
     //Activity for heart rate monitoring.
+    private boolean isHRRunning;// this variable clears up everytime...
     private static final Logger LOG = LoggerFactory.getLogger(EmergencyHRActivity.class);
     TextView textHR;
     GBDevice gbDevice;
+    ProgressBar progressHR;
+    TextView textFlavourHRLimit;
+
     private int maxHeartRateValue;
     private int minHeartRateValue;
     final ActivityUser activityUser = new ActivityUser();
     final int height = activityUser.getHeightCm();
     final int weight = activityUser.getWeightKg();
     final int birthYear = activityUser.getYearOfBirth();
-    Button EmergencyHRActivityButton;
+    Button btnStopHR;
+    Button btnStartHR;
     private ScheduledExecutorService pulseScheduler;
     Map<String, Number> heart_rate_threshold = updateHeartRateThreshold();
 
@@ -138,12 +142,12 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
         }
     };
 
+/*
     private void pulse() {
 
         // have to enable it again and again to keep it measuring
         GBApplication.deviceService().onEnableRealtimeHeartRateMeasurement(true);
     }
-
     private ScheduledExecutorService startActivityPulse() {
         ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
         service.scheduleAtFixedRate(new Runnable() {
@@ -164,23 +168,31 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
             pulseScheduler.shutdownNow();
             pulseScheduler = null;
         }
-        super.onDestroy();
-        LOG.debug("destroyed");
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(mReceiver);
+
+        //LocalBroadcastManager.getInstance(this).unregisterReceiver(mReceiver);
     }
+    */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         //GBApplication.getDeviceSpecificSharedPrefs(gbDevice.getAddress()).getBoolean("emergency_hr_device", false);
 
         final Context appContext = this.getApplicationContext();
-        if (getPrefs().getBoolean("pref_emergency_hr_enable",false) == true) {
 
+        if (appContext instanceof GBApplication) {
+            setContentView(R.layout.activity_heartrate_emergency);
+        }
+        textHR = findViewById(R.id.textHR);
+        textFlavourHRLimit = findViewById(R.id.textFlavourHRLimit);
+        btnStartHR = findViewById(R.id.btnStartHR);
+        btnStopHR = findViewById(R.id.btnStopHR);
+        progressHR = findViewById(R.id.progressHR);
+
+
+        //enable broadcast if not detected, !receiverCheck meaning receiverCheck is false / nonexistent due to exception caused.
+        if (getPrefs().getBoolean("pref_emergency_hr_enable",false) == true) {
+            //pulseScheduler = startActivityPulse();
             Intent intent = getIntent();
-            IntentFilter filter = new IntentFilter();
-            filter.addAction(DeviceService.ACTION_REALTIME_SAMPLES);
-            LocalBroadcastManager.getInstance(getContext()).registerReceiver(mReceiver, filter);
-            getContext().registerReceiver(mReceiver, filter);
             Bundle bundle = intent.getExtras();
             if (bundle != null) {
                 gbDevice = bundle.getParcelable(GBDevice.EXTRA_DEVICE);
@@ -188,44 +200,98 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
                 throw new IllegalArgumentException("Must provide a device when invoking this activity");
             }
             //GBApplication.deviceService(gbDevice).onHeartRateTest();
-            GB.toast(getBaseContext(), "MAX HR:" + String.valueOf(heart_rate_threshold.get("maxHeartRateValue")) + " MIN HR: " + String.valueOf(heart_rate_threshold.get("minHeartRateValue")), 2000, 0);
-            if (appContext instanceof GBApplication) {
-                setContentView(R.layout.activity_heartrate_emergency);
-            }
-            textHR = findViewById(R.id.textHR);
-            EmergencyHRActivityButton = findViewById(R.id.btnStopHR);
-            pulseScheduler = startActivityPulse();
+            //GB.toast(getBaseContext(), "MAX HR:" + String.valueOf(heart_rate_threshold.get("maxHeartRateValue")) + " MIN HR: " + String.valueOf(heart_rate_threshold.get("minHeartRateValue")), 2000, 0);
 
-            EmergencyHRActivityButton.setOnClickListener(new View.OnClickListener() {
+            textFlavourHRLimit.setText(
+                    "MAX HR:" + String.valueOf(heart_rate_threshold.get("maxHeartRateValue")) + " MIN HR: " + String.valueOf(heart_rate_threshold.get("minHeartRateValue"))
+            );
+            //pulseScheduler = startActivityPulse();
+            btnStartHR.setText(getBaseContext().getString(R.string.start));
+            btnStopHR.setText(getBaseContext().getString(R.string.stop));
+
+            btnStopHR.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    GB.toast(getBaseContext(), "STOP", 2000, 0);
-                    stopActivityPulse();
+                    //enable broadcast if not detected, !receiverCheck meaning receiverCheck is false / nonexistent due to exception caused.
+                    //receiverCheck meaning it's true / existent.
+                    if(isHRRunning==true) {
+                        isHRRunning = false;
+                        GB.toast(getBaseContext(), "STOP", 2000, 0);
+                    }else GB.toast(getBaseContext(), "ALREADY STOP", 2000, 0);
+
+
+                }
+            });
+            btnStartHR.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    if (isHRRunning==false){
+                        isHRRunning = true;
+                        GB.toast(getBaseContext(), "START", 2000, 0);
+                    }
+                    else GB.toast(getBaseContext(), "ALREADY START", 2000, 0);
 
                 }
             });
         }
         else if (getPrefs().getBoolean("pref_emergency_hr_enable",false) == false) {
-            if (appContext instanceof GBApplication) {
-                setContentView(R.layout.activity_heartrate_emergency);
-            }
-            textHR = findViewById(R.id.textHR);
-            EmergencyHRActivityButton = findViewById(R.id.btnStopHR);
+
             GB.toast(getBaseContext(), (getBaseContext().getString(R.string.error_hr_disabled)), 2000, 0);
             textHR.setText(getBaseContext().getString(R.string.error_hr_disabled));
-            EmergencyHRActivityButton.setVisibility(View.GONE);
+            btnStopHR.setVisibility(View.GONE);
+            btnStartHR.setVisibility(View.GONE);
         }
         }
 
-    @Override
+    /*
+        @Override
     protected void onDestroy() {
         super.onDestroy();
-    }
-    private void setMeasurementResults(Serializable result) {
+        //LocalBroadcastManager.getInstance(this).unregisterReceiver(mReceiver);
 
+    }
+    */
+    private void enableEmergencyHRTracking(boolean enable) {
+        IntentFilter filter = new IntentFilter();
+
+        filter.addAction(DeviceService.ACTION_REALTIME_SAMPLES);
+        if (enable && !isHRRunning) {
+            textHR.setText(getString(R.string.start));
+            progressHR.setVisibility(View.VISIBLE);
+            LocalBroadcastManager.getInstance(getContext()).registerReceiver(mReceiver, filter);
+            getContext().registerReceiver(mReceiver, filter);
+            isHRRunning = true;
+        } else if (!enable && isHRRunning) {
+            textHR.setText(getString(R.string.stop));
+            progressHR.setVisibility(View.VISIBLE);
+            LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(mReceiver);
+            getContext().unregisterReceiver(mReceiver);
+            isHRRunning = false;
+        }
+        else{
+        }
+    }
+
+    @Override protected void onPause() {
+        LOG.debug("HIDE THE WARNING SYSTEM");
+
+        enableEmergencyHRTracking(false);
+        super.onPause();
+    }
+
+    @Override protected void onResume() {
+        LOG.debug("SHOW THE WARNING SYSTEM");
+
+        enableEmergencyHRTracking(true);
+        super.onResume();
+    }
+
+    private void setMeasurementResults(Serializable result) {
+        progressHR.setVisibility(View.GONE);
+        if (isHRRunning == true){
         if (result instanceof ActivitySample) {
+            isHRRunning = true;
             ActivitySample sample = (ActivitySample) result;
-            textHR.setVisibility(View.VISIBLE);
             if (HeartRateUtils.getInstance().isValidHeartRateValue(sample.getHeartRate())){
                 //if (sample.getHeartRate()<int.valueOf(updateSmartHeartRatePreferences().get("minHeartRateValue"))){}
                 if (sample.getHeartRate() > heart_rate_threshold.get("maxHeartRateValue").intValue()){
@@ -238,6 +304,10 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
                 }
                 textHR.setText(String.valueOf(sample.getHeartRate()));
             }
+        }
+        }
+        else {
+            enableEmergencyHRTracking(false);
         }
     }
 
