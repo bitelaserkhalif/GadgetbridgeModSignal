@@ -17,6 +17,6 @@
         <intent
             android:targetPackage="blk.freeyourgadget.gadgetbridge"
             android:targetClass="blk.freeyourgadget.gadgetbridge.devices.huami.HuamiKeygenActivity" />
-            />
+
     </Preference>
 </androidx.preference.PreferenceScreen>

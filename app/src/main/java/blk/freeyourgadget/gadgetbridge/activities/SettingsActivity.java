@@ -18,6 +18,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package blk.freeyourgadget.gadgetbridge.activities;
 
+import static blk.freeyourgadget.gadgetbridge.GBApplication.getContext;
+import static blk.freeyourgadget.gadgetbridge.GBApplication.getPrefs;
+
 import android.Manifest;
 import android.app.AlertDialog;
 import android.content.Context;
@@ -68,6 +71,7 @@ import blk.freeyourgadget.gadgetbridge.devices.miband.MiBandPreferencesActivity;
 import blk.freeyourgadget.gadgetbridge.devices.qhybrid.ConfigActivity;
 import blk.freeyourgadget.gadgetbridge.devices.zetime.ZeTimePreferenceActivity;
 import blk.freeyourgadget.gadgetbridge.model.Weather;
+import blk.freeyourgadget.gadgetbridge.service.emergencyhrsend.WhatsappSupport;
 import blk.freeyourgadget.gadgetbridge.util.AndroidUtils;
 import blk.freeyourgadget.gadgetbridge.util.FileUtils;
 import blk.freeyourgadget.gadgetbridge.util.GB;
@@ -101,13 +105,21 @@ public class SettingsActivity extends AbstractSettingsActivity {
                 return true;
             }
         });
-
-
         pref = findPreference("pref_charts");
         pref.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
             public boolean onPreferenceClick(Preference preference) {
                 Intent enableIntent = new Intent(SettingsActivity.this, ChartsPreferencesActivity.class);
                 startActivity(enableIntent);
+                return true;
+            }
+        });
+
+        pref = findPreference("emergency_hr_test_whatsapp");
+        pref.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+            public boolean onPreferenceClick(Preference preference) {
+                final WhatsappSupport whatsappsupport = new WhatsappSupport();
+                GB.toast(getContext(),(prefs.getString("emergency_hr_telno_cc1", "") + getPrefs().getString("emergency_hr_telno1", "")),5000,0);
+                whatsappsupport.sendWAEmergencyTesting();
                 return true;
             }
         });

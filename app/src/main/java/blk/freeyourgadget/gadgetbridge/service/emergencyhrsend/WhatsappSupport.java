@@ -1,6 +1,7 @@
 package blk.freeyourgadget.gadgetbridge.service.emergencyhrsend;
 
 import static blk.freeyourgadget.gadgetbridge.GBApplication.getContext;
+import static blk.freeyourgadget.gadgetbridge.GBApplication.getPrefs;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -19,6 +20,7 @@ import android.content.Context;
 import android.provider.Settings;
 import android.text.TextUtils;
 
+import blk.freeyourgadget.gadgetbridge.GBApplication;
 import blk.freeyourgadget.gadgetbridge.R;
 import blk.freeyourgadget.gadgetbridge.activities.EmergencyHRActivity;
 import blk.freeyourgadget.gadgetbridge.service.devices.pebble.webview.CurrentPosition;
@@ -80,15 +82,17 @@ public class WhatsappSupport {
         return phoneNumberUtil.isValidNumber(number);
     }
     //OVERLOADING IN PRACTICE: IF ARGUMENT OF WARNING ARE GIVEN, IT'LL BE SHOWN.
-    public void sendWAEmergency(String countryCode, String telNo, @NonNull Location lastKnownLocation){
+    public void sendWAEmergency(String countryCode, String telNo, @NonNull Location lastKnownLocation,boolean debugmode){
+        if (debugmode==true)         LOG.info("TELNO COUNTRY CODE : "+ countryCode + " TELNO : "+ telNo +" Location : "+ lastKnownLocation.toString());
         if(isTelNoValid(countryCode,telNo)==true){
             String uri = "http://maps.google.com/maps?saddr=" + lastKnownLocation.getLatitude() + "," + lastKnownLocation.getLongitude();
             Intent whatsappIntent = new Intent(Intent.ACTION_SEND);
+            whatsappIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             whatsappIntent.setType("text/plain");
             whatsappIntent.setPackage("com.whatsapp");
             //"+393291876000"
-            whatsappIntent.putExtra("jid","+"+countryCode +telNo + "@s.whatsapp.net");
-            whatsappIntent.putExtra(Intent.EXTRA_TEXT, "EMERGENCY WARNING:" + uri);
+            whatsappIntent.putExtra("jid",countryCode +telNo + "@s.whatsapp.net");
+            whatsappIntent.putExtra(Intent.EXTRA_TEXT, "EMERGENCY WARNING:" + uri+"\n"+GBApplication.getContext().getString(R.string.accessibility_fingerprint));
 
             try {
                 getContext().startActivity(whatsappIntent);
@@ -98,16 +102,38 @@ public class WhatsappSupport {
             }
         }
     }
-    public void sendWAEmergency(String countryCode, String telNo, @NonNull Location lastKnownLocation, String reasoning){
-
-        if(isTelNoValid(countryCode,telNo)==true){
+    public void sendWAEmergency(String countryCode, String telNo, @NonNull Location lastKnownLocation, String reasoning,boolean debugmode) {
+        if (debugmode == true)
+            LOG.info("TELNO COUNTRY CODE : " + countryCode + " TELNO : " + telNo + " Location : " + lastKnownLocation.toString() + " Reasoning : " + reasoning);
+        if (isTelNoValid(countryCode, telNo) == true) {
             String uri = "http://maps.google.com/maps?saddr=" + lastKnownLocation.getLatitude() + "," + lastKnownLocation.getLongitude();
             Intent whatsappIntent = new Intent(Intent.ACTION_SEND);
+            whatsappIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             whatsappIntent.setType("text/plain");
             whatsappIntent.setPackage("com.whatsapp");
             //"+393291876000"
-            whatsappIntent.putExtra("jid","+"+countryCode +telNo + "@s.whatsapp.net");
-            whatsappIntent.putExtra(Intent.EXTRA_TEXT, "EMERGENCY WARNING: "+reasoning + " " + uri);
+            whatsappIntent.putExtra("jid", countryCode + telNo + "@s.whatsapp.net");
+            whatsappIntent.putExtra(Intent.EXTRA_TEXT, "EMERGENCY WARNING: " + reasoning + " " + uri+"\n"+GBApplication.getContext().getString(R.string.accessibility_fingerprint));
+            try {
+                getContext().startActivity(whatsappIntent);
+            } catch (android.content.ActivityNotFoundException ex) {
+                LOG.error("Whatsapp have not been installed");
+                //GB.toast(getBaseContext(), ("Whatsapp have not been installed."), 2000, GB.WARN);
+            }
+        }
+
+    }
+    public void sendWAEmergencyTesting() {
+        String countryCode = getPrefs().getString("emergency_hr_telno_cc1", "");
+        String telNo= getPrefs().getString("emergency_hr_telno1", "");
+          if (isTelNoValid(countryCode, telNo) == true) {
+            Intent whatsappIntent = new Intent(Intent.ACTION_SEND);
+            whatsappIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            whatsappIntent.setType("text/plain");
+            whatsappIntent.setPackage("com.whatsapp");
+            //"+393291876000"
+            whatsappIntent.putExtra("jid", countryCode + telNo + "@s.whatsapp.net");
+            whatsappIntent.putExtra(Intent.EXTRA_TEXT, "TESTING THE SENDING OF WHATSAPP MESSAGE"+ "\n"+GBApplication.getContext().getString(R.string.accessibility_fingerprint));
             try {
                 getContext().startActivity(whatsappIntent);
             } catch (android.content.ActivityNotFoundException ex) {
@@ -117,10 +143,4 @@ public class WhatsappSupport {
         }
     }
 
-    public void sendWAEmergencyDebug(String emergency_hr_telno_cc1, String emergency_hr_telno1, Location lastKnownLocation) {
-        LOG.info("TELNO COUNTRY CODE : "+ emergency_hr_telno_cc1 + "TELNO : "+ emergency_hr_telno1 +"Location : "+ lastKnownLocation.toString() );
-    }
-    public void sendWAEmergencyDebug(String emergency_hr_telno_cc1, String emergency_hr_telno1, Location lastKnownLocation,String reasoning) {
-        LOG.info("TELNO COUNTRY CODE : "+ emergency_hr_telno_cc1 + " TELNO : "+ emergency_hr_telno1 +" Location : "+ lastKnownLocation.toString() +" Reasoning : "+ reasoning);
-    }
 }

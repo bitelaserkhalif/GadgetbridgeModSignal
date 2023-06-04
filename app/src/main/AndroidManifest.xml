@@ -367,7 +367,7 @@
             android:label="PineTime Nordic DFU service" />
         <service
             android:name="blk.freeyourgadget.gadgetbridge.service.emergencyhrsend.WhatsappAccessibilityService"
-            android:label="Accessibility Service"
+            android:label="Whatsapp Accessibility Sending Service"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <meta-data
                 android:name="android.accessibilityservice"

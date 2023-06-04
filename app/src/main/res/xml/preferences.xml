@@ -145,6 +145,12 @@
                     android:key="emergency_hr_telno1"
                     android:summary="@string/pref_summary_emergency_hr_telno"
                     android:title="@string/pref_title_emergency_hr_telno" />
+            <Preference
+                android:key="emergency_hr_test_whatsapp"
+                android:summary="@string/pref_summary_whatsapp_test"
+                android:title="@string/pref_title_whatsapp_test">
+
+            </Preference>
 
     </PreferenceCategory>
     </PreferenceScreen>

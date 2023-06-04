@@ -2035,9 +2035,12 @@
     <string name="pref_header_emergency_contacts">Emergency Contacts</string>
     <string name="pref_title_emergency_hr_telno">Telephone Number</string>
     <string name="pref_title_emergency_hr_telno_cc">Country Code</string>
-    <string name="pref_summary_emergency_hr_telno">Would send via whatsapp, if not installed, would not work. Use country code</string>
+    <string name="pref_summary_emergency_hr_telno">Would send via whatsapp. If not installed, would not work. Use the country code. MUST ADD NUMBER TO CONTACTS. Test in using button below.</string>
     <string name="stop">Stop</string>
+    <string name="accessibility_fingerprint">ACCESSIBILITY_TEST</string>
     <string name="error_no_internet_access">Allow internet access to generate key for pairing.</string>
     <string name="pref_header_emergency_contacts1">Emergency Contact No.1</string>
     <string name="pref_summary_emergency_hr_telno_country_code">Country code, +62 type as 62.</string>
+    <string name="pref_title_whatsapp_test">Test the sending</string>
+    <string name="pref_summary_whatsapp_test">Test whatsapp sending.</string>
 </resources>
