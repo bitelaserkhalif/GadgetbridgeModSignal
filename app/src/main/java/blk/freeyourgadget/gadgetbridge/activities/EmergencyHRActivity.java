@@ -3,12 +3,15 @@ package blk.freeyourgadget.gadgetbridge.activities;
 import static blk.freeyourgadget.gadgetbridge.GBApplication.getContext;
 import static blk.freeyourgadget.gadgetbridge.GBApplication.getPrefs;
 
+import android.accessibilityservice.AccessibilityService;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.location.Location;
 import android.os.Bundle;
+import android.provider.Settings;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -40,6 +43,8 @@ import blk.freeyourgadget.gadgetbridge.model.ActivitySample;
 import blk.freeyourgadget.gadgetbridge.model.ActivityUser;
 import blk.freeyourgadget.gadgetbridge.model.DeviceService;
 import blk.freeyourgadget.gadgetbridge.service.devices.pebble.webview.CurrentPosition;
+import blk.freeyourgadget.gadgetbridge.service.emergencyhrsend.WhatsappAccessibilityService;
+import blk.freeyourgadget.gadgetbridge.service.emergencyhrsend.WhatsappSupport;
 import blk.freeyourgadget.gadgetbridge.util.GB;
 import blk.freeyourgadget.gadgetbridge.util.Prefs;
 
@@ -48,6 +53,8 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
 
     PhoneNumberUtil phoneNumberUtil = PhoneNumberUtil.getInstance();
     private boolean isHRRunning;// this variable clears up everytime...
+    final WhatsappSupport whatsappsupport = new WhatsappSupport();
+
     private static final Logger LOG = LoggerFactory.getLogger(EmergencyHRActivity.class);
     TextView textHR;
     GBDevice gbDevice;
@@ -181,12 +188,12 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
                 throw new IllegalArgumentException("Must provide a device when invoking this activity");
             }
             textFlavourHRLimit.setText(
-                    "MAX HR:" + String.valueOf(heart_rate_threshold.get("maxHeartRateValue")) + " MIN HR: " + String.valueOf(heart_rate_threshold.get("minHeartRateValue"))
+                    getString(R.string.prefs_heartrate_alert_low_threshold)+": " +String.valueOf(heart_rate_threshold.get("minHeartRateValue")+"\n"+
+                            getString(R.string.prefs_heartrate_alert_high_threshold) +": " + String.valueOf(heart_rate_threshold.get("maxHeartRateValue")) )
             );
             //pulseScheduler = startActivityPulse();
             btnStartHR.setText(getBaseContext().getString(R.string.start));
             btnStopHR.setText(getBaseContext().getString(R.string.stop));
-
             btnStopHR.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
@@ -215,10 +222,18 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
 
                 }
             });
+            if((getPrefs().getString("emergency_hr_telno_cc1","")!="" && getPrefs().getString("emergency_hr_telno1","")!="") ||
+                    (getPrefs().getString("emergency_hr_telno_cc1","")!="" || getPrefs().getString("emergency_hr_telno1","")!="") ) {
+                LOG.debug("ACC ON:" +whatsappsupport.isAccessibilityOn());
+                if (!whatsappsupport.isAccessibilityOn()) {
+                    accessibilityPopup();
+                }
+            }
         }
         else if (getPrefs().getBoolean("pref_emergency_hr_enable",false) == false) {
 
         }
+
         }
 
     /*
@@ -242,8 +257,8 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
                 getContext().registerReceiver(mReceiver, filter);
                 isHRRunning = true;
             } else if (!enable && isHRRunning) {
-                textHR.setText("Stopping..");
-                textFlavourHRStatus.setText(getString(R.string.stop));
+                textHR.setText("Background..");
+                textFlavourHRStatus.setText(getString(R.string.watchface_dialog_widget_background));
                 progressHR.setVisibility(View.VISIBLE);
                 LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(mReceiver);
                 getContext().unregisterReceiver(mReceiver);
@@ -284,15 +299,20 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
             if (HeartRateUtils.getInstance().isValidHeartRateValue(sample.getHeartRate())){
                 //if (sample.getHeartRate()<int.valueOf(updateSmartHeartRatePreferences().get("minHeartRateValue"))){}
                 LOG.debug("Hr monitor is ongoing");
+                textHR.setText(String.valueOf(sample.getHeartRate()));
                 if (sample.getHeartRate() > heart_rate_threshold.get("maxHeartRateValue").intValue()){
-                    emergencyWarning("HR HIGH");
-                    //GB.toast(getBaseContext(), "EXCEED", 2000, 0);
+                    GB.toast(getBaseContext(), (getBaseContext().getString(R.string.emergency_hr_anomaly_high)), 2000, GB.WARN);
+                    textHR.setText(String.valueOf(sample.getHeartRate()));
+                    emergencyWarning(getBaseContext().getString(R.string.emergency_hr_anomaly_high));
+                    //HIGH HEART RATE
                 }
                 if (sample.getHeartRate() < heart_rate_threshold.get("minHeartRateValue").intValue()){
-                    emergencyWarning("HR LOW");
-                    //GB.toast(getBaseContext(), "LOW", 2000, 0);
+                    GB.toast(getBaseContext(), (getBaseContext().getString(R.string.emergency_hr_anomaly_low)), 2000, GB.WARN);
+                    textHR.setText(String.valueOf(sample.getHeartRate()));
+                    emergencyWarning(getBaseContext().getString(R.string.emergency_hr_anomaly_low));
+                    //LOW HEART RATE
                 }
-                textHR.setText(String.valueOf(sample.getHeartRate()));
+
             }
         }
         }
@@ -303,69 +323,36 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
     //HR VALUES:
 
     private void emergencyWarning(String HR){
+
         final Location lastKnownLocation = new CurrentPosition().getLastKnownLocation();
-        LOG.debug(HR);
-        //LOG.debug (getPrefs().getString("emergency_hr_telno_cc1","00") + getPrefs().getString("emergency_hr_telno1","0000000000000"));
-        LOG.debug ("VALIDITY OF TELNO: "+ String.valueOf(isTelNoValid(getPrefs().getString("emergency_hr_telno_cc1","00") , getPrefs().getString("emergency_hr_telno1","0000000000000"))));
-        LOG.debug(String.valueOf(lastKnownLocation));
-
-
         //this is whatsapp sending method. Set to false to prevent spamming
-        sendWAEmergency(getPrefs().getString("emergency_hr_telno_cc1","00"),getPrefs().getString("emergency_hr_telno1","0000000000000"),lastKnownLocation);
+        if((getPrefs().getString("emergency_hr_telno_cc1","")!="" && getPrefs().getString("emergency_hr_telno1","")!="") ||
+                (getPrefs().getString("emergency_hr_telno_cc1","")!="" || getPrefs().getString("emergency_hr_telno1","")!="")) {
+            if (whatsappsupport.isAccessibilityOn() == false) {
+                accessibilityPopup();
+            }
+            whatsappsupport.sendWAEmergencyDebug(getPrefs().getString("emergency_hr_telno_cc1", ""), getPrefs().getString("emergency_hr_telno1", ""), lastKnownLocation, HR);
+        }
+        textHR.setText("!!!");
         isHRRunning = false;
         enableEmergencyHRTracking(false);
-
     }
-    private boolean isTelNoValid(String countryCode, String telNo){
-        Phonenumber.PhoneNumber number = new Phonenumber.PhoneNumber();
-        try {
-            // the parse method parses the string and
-            // returns a PhoneNumber in the format of
-            // specified region
-            number = phoneNumberUtil.parse("+"+countryCode+telNo,"");
-
-            // this statement prints the type of the phone
-            // number
-            //LOG.debug(String.valueOf(phoneNumberUtil.getNumberType(number)));
-            //LOG.debug(String.valueOf(phoneNumberUtil.getRegionCodeForNumber(number)));
-        }
-        catch (NumberParseException e) {
-            LOG.error("CANNOT PARSE TEL.NO");
-            e.printStackTrace();
-        }
-
-        return phoneNumberUtil.isValidNumber(number);
-        }
-        //OVERLOADING IN PRACTICE: IF ARGUMENT OF WARNING ARE GIVEN, IT'LL BE SHOWN.
-    private void sendWAEmergency(String countryCode, String telNo, @NonNull Location lastKnownLocation){
-        String uri = "http://maps.google.com/maps?saddr=" + lastKnownLocation.getLatitude() + "," + lastKnownLocation.getLongitude();
-        Intent whatsappIntent = new Intent(Intent.ACTION_SEND);
-        whatsappIntent.setType("text/plain");
-        whatsappIntent.setPackage("com.whatsapp");
-        //"+393291876000"
-        whatsappIntent.putExtra("jid","+"+countryCode +telNo + "@s.whatsapp.net");
-        whatsappIntent.putExtra(Intent.EXTRA_TEXT, "EMERGENCY WARNING:");
-        whatsappIntent.putExtra(Intent.EXTRA_TEXT, uri);
-        try {
-            startActivity(whatsappIntent);
-        } catch (android.content.ActivityNotFoundException ex) {
-            GB.toast(getBaseContext(), ("Whatsapp have not been installed."), 2000, GB.WARN);
-        }
+    private void accessibilityPopup(){
+        LOG.debug("ACC ON:" +whatsappsupport.isAccessibilityOn());
+        GB.toast(getBaseContext(), "Accessibility is not set for whatsapp messaging, please set first!", 5000, 0);
+        Intent accessible = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+        accessible.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        getContext().startActivity(accessible);
     }
-    private void sendWAEmergency(String countryCode, String telNo, @NonNull Location lastKnownLocation, String reasoning){
-        String uri = "http://maps.google.com/maps?saddr=" + lastKnownLocation.getLatitude() + "," + lastKnownLocation.getLongitude();
-        Intent whatsappIntent = new Intent(Intent.ACTION_SEND);
-        whatsappIntent.setType("text/plain");
-        whatsappIntent.setPackage("com.whatsapp");
-        //"+393291876000"
-        whatsappIntent.putExtra("jid","+"+countryCode +telNo + "@s.whatsapp.net");
-        whatsappIntent.putExtra(Intent.EXTRA_TEXT, "EMERGENCY WARNING:");
-        whatsappIntent.putExtra(Intent.EXTRA_TEXT, reasoning);
-        whatsappIntent.putExtra(Intent.EXTRA_TEXT, uri);
-        try {
-            startActivity(whatsappIntent);
-        } catch (android.content.ActivityNotFoundException ex) {
-            GB.toast(getBaseContext(), ("Whatsapp have not been installed."), 2000, GB.WARN);
-        }
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        //outState.putParcelable(STATE_DEVICE_CANDIDATE, deviceCandidate);
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        //deviceCandidate = savedInstanceState.getParcelable(STATE_DEVICE_CANDIDATE);
     }
 }
