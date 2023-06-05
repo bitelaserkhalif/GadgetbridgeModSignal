@@ -3,9 +3,11 @@ package blk.freeyourgadget.gadgetbridge.service.emergencyhrsend;
 import static blk.freeyourgadget.gadgetbridge.GBApplication.getContext;
 import static blk.freeyourgadget.gadgetbridge.GBApplication.getPrefs;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.accessibilityservice.AccessibilityService;
+import android.app.Service;
 import android.content.Intent;
 import android.location.Location;
 
@@ -17,6 +19,7 @@ import com.google.i18n.phonenumbers.Phonenumber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import android.content.Context;
+import android.os.IBinder;
 import android.provider.Settings;
 import android.text.TextUtils;
 
