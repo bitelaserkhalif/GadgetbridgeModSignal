@@ -2,21 +2,31 @@ package blk.freeyourgadget.gadgetbridge.service.emergencyhrsend;
 
 import static blk.freeyourgadget.gadgetbridge.GBApplication.getContext;
 import static blk.freeyourgadget.gadgetbridge.GBApplication.getPrefs;
+import static blk.freeyourgadget.gadgetbridge.GBApplication.isRunningOreoOrLater;
+import static blk.freeyourgadget.gadgetbridge.model.DeviceService.EXTRA_CONNECT_FIRST_TIME;
+import static blk.freeyourgadget.gadgetbridge.util.GB.NOTIFICATION_CHANNEL_HIGH_PRIORITY_ID;
+import static blk.freeyourgadget.gadgetbridge.util.GB.NOTIFICATION_CHANNEL_ID;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Color;
 import android.location.Location;
 import android.media.MediaPlayer;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.IBinder;
 import android.provider.Settings;
-import android.view.View;
 
 import androidx.annotation.Nullable;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.slf4j.Logger;
@@ -25,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import java.io.Serializable;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -33,6 +44,7 @@ import blk.freeyourgadget.gadgetbridge.R;
 import blk.freeyourgadget.gadgetbridge.activities.EmergencyHRActivity;
 import blk.freeyourgadget.gadgetbridge.activities.HeartRateUtils;
 import blk.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst;
+import blk.freeyourgadget.gadgetbridge.impl.GBDevice;
 import blk.freeyourgadget.gadgetbridge.model.ActivitySample;
 import blk.freeyourgadget.gadgetbridge.model.ActivityUser;
 import blk.freeyourgadget.gadgetbridge.model.DeviceService;
@@ -41,12 +53,18 @@ import blk.freeyourgadget.gadgetbridge.util.GB;
 import blk.freeyourgadget.gadgetbridge.util.Prefs;
 
 public class HRMonitor  extends Service {
+    public static final int NOTIFICATION_ID_HR = 8;
+    public static final String NOTIFICATION_ID_HR_STRING = "gadgetbridge hr";
+    public static final int NOTIFICATION_ID_HR_DANGER = 10;
+    public static final String NOTIFICATION_ID_HR_DANGER_STRING = "gadgetbridge hr danger";
     Map<String, Number> heart_rate_threshold = updateHeartRateThreshold();
 
     public static final String P_HR_SMART;
+    public static Boolean mStarted = false;
     public static final String P_HR_MANUAL;
     public static final String P_HR_READMAX;
     private boolean isHRRunning;// this variable clears up everytime...
+    private static boolean notificationChannelsCreated;
 
     final WhatsappSupport whatsappsupport = new WhatsappSupport();
 
@@ -149,12 +167,12 @@ public class HRMonitor  extends Service {
                     //textHR.setText(String.valueOf(sample.getHeartRate()));
                     if (sample.getHeartRate() > heart_rate_threshold.get("maxHeartRateValue").intValue()){
                         GB.toast(getBaseContext(), (getBaseContext().getString(R.string.emergency_hr_anomaly_high)), 2000, GB.WARN);
-                        emergencyWarning(getBaseContext().getString(R.string.emergency_hr_anomaly_high));
+                        //emergencyWarning(getBaseContext().getString(R.string.emergency_hr_anomaly_high));
                         //HIGH HEART RATE
                     }
                     if (sample.getHeartRate() < heart_rate_threshold.get("minHeartRateValue").intValue()){
                         GB.toast(getBaseContext(), (getBaseContext().getString(R.string.emergency_hr_anomaly_low)), 2000, GB.WARN);
-                        emergencyWarning(getBaseContext().getString(R.string.emergency_hr_anomaly_low));
+                        //emergencyWarning(getBaseContext().getString(R.string.emergency_hr_anomaly_low));
                         //LOW HEART RATE
                     }
 
@@ -162,7 +180,6 @@ public class HRMonitor  extends Service {
             }
         }
         else {
-            enableEmergencyHRTracking(false);
         }
     }
     //HR VALUES:
@@ -187,7 +204,6 @@ public class HRMonitor  extends Service {
         }
 
         //textHR.setText("!!!");
-        enableEmergencyHRTracking(false);
 
 
         if(isHRRunning==true) {
@@ -197,8 +213,8 @@ public class HRMonitor  extends Service {
     }
     private void enableEmergencyHRTracking(boolean enable) {
         IntentFilter filter = new IntentFilter();
-        boolean globalHRMonitor = getPrefs().getBoolean("pref_emergency_hr_enable",false);
         filter.addAction(DeviceService.ACTION_REALTIME_SAMPLES);
+        boolean globalHRMonitor = getPrefs().getBoolean("pref_emergency_hr_enable",false);
         LOG.debug("HRRUNNING:"+String.valueOf(isHRRunning));
         LOG.debug("enable:"+String.valueOf(enable));
         if(globalHRMonitor){
@@ -245,6 +261,141 @@ public class HRMonitor  extends Service {
         accessible.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         getContext().startActivity(accessible);
     }
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(DeviceService.ACTION_REALTIME_SAMPLES);
+        getContext().registerReceiver(mReceiver, filter);
+
+    }
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        getContext().unregisterReceiver(mReceiver);
+
+    }
+    private void start() {
+        if(!mStarted){
+            createNotificationChannels(getContext());
+            startForeground(NOTIFICATION_ID_HR, this.createNotification(getString(R.string.emergencyhr_detail_activity_title), this));
+            mStarted = true;
+        }
+    }
+
+    public static void createNotificationChannels(Context context) {
+        if (notificationChannelsCreated) return;
+
+        if (isRunningOreoOrLater()) {
+            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
+
+            NotificationChannel channelGeneral = new NotificationChannel(
+                    NOTIFICATION_ID_HR_STRING,
+                    context.getString(R.string.notification_channel_name),
+                    NotificationManager.IMPORTANCE_LOW);
+            notificationManager.createNotificationChannel(channelGeneral);
+
+            NotificationChannel channelHighPriority = new NotificationChannel(
+                    NOTIFICATION_ID_HR_DANGER_STRING,
+                    context.getString(R.string.notification_channel_high_priority_name),
+                    NotificationManager.IMPORTANCE_HIGH);
+            notificationManager.createNotificationChannel(channelHighPriority);
+
+        }
+
+        notificationChannelsCreated = true;
+    }
+    public boolean isStarted() {
+        return mStarted;
+    }
+
+    public Notification createNotification(List<GBDevice> devices, Context context)
+    {
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, NOTIFICATION_ID_HR_STRING);
+
+
+        builder.setDefaults(Notification.DEFAULT_LIGHTS);
+
+        String message = "HR Service Test";
+        builder.setSmallIcon(R.drawable.ic_heart_alert)
+                .setAutoCancel(false)
+                .setPriority(Notification.PRIORITY_MAX)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setColor(Color.parseColor("#0f9595"))
+                .setContentTitle(getString(R.string.app_name))
+                .setContentText(message);
+
+        Intent launchIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
+        launchIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        PendingIntent contentIntent = PendingIntent.getActivity(this, 0, launchIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT);
+        builder.setContentIntent(contentIntent);
+
+        Notification notification = builder.build();
+        notification.flags = Notification.FLAG_ONGOING_EVENT;
+        return notification;
+    }
+
+    public Notification createNotification(String text, Context context)
+    {
+
+
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, NOTIFICATION_ID_HR_STRING);
+
+
+        builder.setDefaults(Notification.DEFAULT_LIGHTS);
+
+        String message = "HR Service Test";
+        builder.setSmallIcon(R.drawable.ic_heart_alert)
+                .setAutoCancel(false)
+                .setPriority(Notification.PRIORITY_MAX)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setColor(Color.parseColor("#0f9595"))
+                .setTicker(text)
+                .setContentTitle(text)
+                .setContentText(message);
+
+        Intent launchIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
+        launchIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        PendingIntent contentIntent = PendingIntent.getActivity(this, 0, launchIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT);
+        builder.setContentIntent(contentIntent);
+
+        Notification notification = builder.build();
+        notification.flags = Notification.FLAG_ONGOING_EVENT;
+        return notification;
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        String action = intent.getAction();
+        Prefs prefs = getPrefs();
+        LOG.debug(action);
+        start();
+
+        GBDevice gbDevice = intent.getParcelableExtra(GBDevice.EXTRA_DEVICE);
+        String btDeviceAddress = null;
+        LOG.debug(gbDevice.toString());
+
+
+        /*
+        if (action == null) {
+            LOG.info("no action");
+            return START_NOT_STICKY;
+        }
+        switch (action) {
+            
+        }*/
+        return START_STICKY;
+    }
+
 
     @Nullable
     @Override

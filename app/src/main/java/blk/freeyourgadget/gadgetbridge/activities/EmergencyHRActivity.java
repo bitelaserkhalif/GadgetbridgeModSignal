@@ -2,6 +2,8 @@ package blk.freeyourgadget.gadgetbridge.activities;
 
 import static blk.freeyourgadget.gadgetbridge.GBApplication.getContext;
 import static blk.freeyourgadget.gadgetbridge.GBApplication.getPrefs;
+import static blk.freeyourgadget.gadgetbridge.util.GB.NOTIFICATION_CHANNEL_HIGH_PRIORITY_ID;
+import static blk.freeyourgadget.gadgetbridge.util.GB.NOTIFICATION_ID_ERROR;
 
 import android.accessibilityservice.AccessibilityService;
 import android.content.BroadcastReceiver;
@@ -22,6 +24,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.i18n.phonenumbers.NumberParseException;
@@ -45,7 +48,9 @@ import blk.freeyourgadget.gadgetbridge.impl.GBDevice;
 import blk.freeyourgadget.gadgetbridge.model.ActivitySample;
 import blk.freeyourgadget.gadgetbridge.model.ActivityUser;
 import blk.freeyourgadget.gadgetbridge.model.DeviceService;
+import blk.freeyourgadget.gadgetbridge.service.NotificationCollectorMonitorService;
 import blk.freeyourgadget.gadgetbridge.service.devices.pebble.webview.CurrentPosition;
+import blk.freeyourgadget.gadgetbridge.service.emergencyhrsend.HRMonitor;
 import blk.freeyourgadget.gadgetbridge.service.emergencyhrsend.WhatsappAccessibilityService;
 import blk.freeyourgadget.gadgetbridge.service.emergencyhrsend.WhatsappSupport;
 import blk.freeyourgadget.gadgetbridge.util.GB;
@@ -74,7 +79,7 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
     Button btnStopHR;
     Button btnStartHR;
     private ScheduledExecutorService pulseScheduler;
-    Map<String, Number> heart_rate_threshold = updateHeartRateThreshold();
+    Map<String, Number> heart_rate_threshold = new HRMonitor().updateHeartRateThreshold();
 
     public static final String P_HR_SMART;
     public static final String P_HR_MANUAL;
@@ -88,80 +93,7 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
         P_HR_READMAX = CONTEXT.getString(R.string.pref_emergency_hr_value_readmax);
     }
 
-    public Map<String, Number> updateHeartRateThreshold(){
-        Map<String, Number> hrvalues = new HashMap<>();
-        Prefs prefs = GBApplication.getPrefs();
-        String GetHRType = prefs.getString("pref_emergency_hr_type","smart");
-        if (GetHRType.equals(P_HR_SMART)){
-            //SMART TYPE = detect by age
-            LOG.debug("hr is smart");
-            if (birthYear==0){//failsafe if invalid
-                LOG.debug("birthYear not set | get value from heartrate_alert_threshold");
-                hrvalues.put("maxHeartRateValue",getMaxHeartRate());
-                hrvalues.put("minHeartRateValue",getMinHeartRate());
-            }
-            else{
-                LOG.debug("birthYear: "+String.valueOf(birthYear));
-                hrvalues.put("maxHeartRateValue",getMaxHeartRateSmart());
-                hrvalues.put("minHeartRateValue",getMinHeartRate());
-                //add smart system here.
-            }
-        }
-        else if (GetHRType.equals(P_HR_READMAX)){
-            //per device type HR LIMIT
-            LOG.debug("hr is per-device max");
-            hrvalues.put("maxHeartRateValue",getMaxHeartRate());
-            hrvalues.put("minHeartRateValue",getMinHeartRate());
-        }
-        else if (GetHRType.equals(P_HR_MANUAL)){
-            LOG.debug("hr is manual");
-            //MANUAL KEY-IN
-            hrvalues.put("maxHeartRateValue",prefs.getInt("emergency_hr_max",150));
-            hrvalues.put("minHeartRateValue",prefs.getInt("emergency_hr_min",45));
-        }
-        return hrvalues;
-    }
 
-    public int getEstimatedAge(){
-        //estimation of current age
-        int todayYear = Calendar.getInstance().get(Calendar.YEAR);
-        int age = todayYear-birthYear;
-        //example is year 2000
-        //return maxHeartRateValue;
-        return age;
-    }
-    public int getMaxHeartRateSmart(){
-        //estimation of current age
-        int age = getEstimatedAge();
-        int maxhr = 220;
-        //return maxHeartRateValue;
-        return maxhr-age;
-    }
-//startService(new Intent(this, NotificationCollectorMonitorService.class)); soon
-    public int getMinHeartRate(){
-        //estimation of current age
-        Prefs prefs = GBApplication.getPrefs();
-        return prefs.getInt(DeviceSettingsPreferenceConst.PREF_HEARTRATE_ALERT_LOW_THRESHOLD, 45);
-    }
-    public int getMaxHeartRate(){
-        //estimation of current age
-        Prefs prefs = GBApplication.getPrefs();
-        return prefs.getInt(DeviceSettingsPreferenceConst.PREF_HEARTRATE_ALERT_HIGH_THRESHOLD, 150);
-    }
-
-    final BroadcastReceiver mReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            switch (Objects.requireNonNull(intent.getAction())) {
-                case DeviceService.ACTION_REALTIME_SAMPLES:
-                    setMeasurementResults(intent.getSerializableExtra(DeviceService.EXTRA_REALTIME_SAMPLE));
-                    break;
-                default:
-                    LOG.info("ignoring intent action " + intent.getAction());
-                    break;
-            }
-        }
-    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -202,12 +134,10 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
                 public void onClick(View view) {
                     //enable broadcast if not detected, !receiverCheck meaning receiverCheck is false / nonexistent due to exception caused.
                     //receiverCheck meaning it's true / existent.
-                    if(isHRRunning==true) {
-                        isHRRunning = false;
+
                         textFlavourHRStatus.setText(getString(R.string.stop));
                         textHR.setText("...");
                         GB.toast(getBaseContext(), "STOP", 2000, 0);
-                    }else GB.toast(getBaseContext(), "ALREADY STOP", 2000, 0);
 
 
                 }
@@ -215,14 +145,29 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
             btnStartHR.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    if (isHRRunning==false){
-                        isHRRunning = true;
                         textFlavourHRStatus.setText(getString(R.string.start));
                         textHR.setText("...");
                         GB.toast(getBaseContext(), "START", 2000, 0);
+                    try {
+                        //the following will ensure the notification manager is kept alive
+                        if(gbDevice!=null){
+                            startService(new Intent(getContext(), HRMonitor.class).putExtra(GBDevice.EXTRA_DEVICE, gbDevice));
+                        }
+                    } catch (IllegalStateException e) {
+                        String message = e.toString();
+                        if (message == null) {
+                            message = getString(R.string._unknown_);
+                        }
+                        GB.notify(NOTIFICATION_ID_ERROR,
+                                new NotificationCompat.Builder(getContext(), NOTIFICATION_CHANNEL_HIGH_PRIORITY_ID)
+                                        .setSmallIcon(R.drawable.gadgetbridge_img)
+                                        .setContentTitle(getString(R.string.test))
+                                        .setContentText(getString(R.string.test_notification))
+                                        .setStyle(new NotificationCompat.BigTextStyle()
+                                                .bigText(getString(R.string.start) + "\"" + message + "\""))
+                                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                                        .build(), getContext());
                     }
-                    else GB.toast(getBaseContext(), "ALREADY START", 2000, 0);
-
                 }
             });
             if((getPrefs().getString("emergency_hr_telno_cc1","")!="" && getPrefs().getString("emergency_hr_telno1","")!="") ||
@@ -247,121 +192,20 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
 
     }
     */
-    private void enableEmergencyHRTracking(boolean enable) {
-        IntentFilter filter = new IntentFilter();
-        boolean globalHRMonitor = getPrefs().getBoolean("pref_emergency_hr_enable",false);
-        filter.addAction(DeviceService.ACTION_REALTIME_SAMPLES);
-        LOG.debug("HRRUNNING:"+String.valueOf(isHRRunning));
-        LOG.debug("enable:"+String.valueOf(enable));
-        if(globalHRMonitor){
-            if (enable && !isHRRunning) {//first start
-                textHR.setText("Starting..");
-                textFlavourHRStatus.setText(getString(R.string.start));
-                progressHR.setVisibility(View.VISIBLE);
-                LocalBroadcastManager.getInstance(getContext()).registerReceiver(mReceiver, filter);
-                getContext().registerReceiver(mReceiver, filter);
-                isHRRunning = true;
-            }else if (enable && isHRRunning) {//started but in process, prevent duplicates
-
-                isHRRunning = true;
-            }
-            else if (!enable && isHRRunning) {//exiting
-                textHR.setText("Stopping..");
-                textFlavourHRStatus.setText(getString(R.string.stop));
-                progressHR.setVisibility(View.VISIBLE);
-                LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(mReceiver);
-                getContext().unregisterReceiver(mReceiver);
-                isHRRunning = false;
-            }
-            else if (!enable && !isHRRunning) {//started but in process, prevent duplicates
-                LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(mReceiver);
-                getContext().unregisterReceiver(mReceiver);
-                isHRRunning = false;
-            }
-        }
-        else if(!globalHRMonitor){
-            GB.toast(getBaseContext(), (getBaseContext().getString(R.string.error_hr_disabled)), 2000, 0);
-            textFlavourHRLimit.setText(getBaseContext().getString(R.string.error_hr_disabled));
-            progressHR.setVisibility(View.GONE);
-            btnStopHR.setVisibility(View.GONE);
-            btnStartHR.setVisibility(View.GONE);
-        }
-        else{
-        }
-    }
 
     @Override protected void onPause() {
         LOG.debug("HIDE THE WARNING SYSTEM");
 
-        enableEmergencyHRTracking(true);
         super.onPause();
     }
 
     @Override protected void onResume() {
         LOG.debug("SHOW THE WARNING SYSTEM");
 
-        enableEmergencyHRTracking(true);
         super.onResume();
     }
 
-    private void setMeasurementResults(Serializable result) {
-        progressHR.setVisibility(View.GONE);
-        if (isHRRunning == true){
-        if (result instanceof ActivitySample) {
-            isHRRunning = true;
-            ActivitySample sample = (ActivitySample) result;
-            if (HeartRateUtils.getInstance().isValidHeartRateValue(sample.getHeartRate())){
-                //if (sample.getHeartRate()<int.valueOf(updateSmartHeartRatePreferences().get("minHeartRateValue"))){}
-                LOG.debug("Emergency HR monitor is ongoing");
-                textHR.setText(String.valueOf(sample.getHeartRate()));
-                if (sample.getHeartRate() > heart_rate_threshold.get("maxHeartRateValue").intValue()){
-                    GB.toast(getBaseContext(), (getBaseContext().getString(R.string.emergency_hr_anomaly_high)), 2000, GB.WARN);
-                    emergencyWarning(getBaseContext().getString(R.string.emergency_hr_anomaly_high));
-                    //HIGH HEART RATE
-                }
-                if (sample.getHeartRate() < heart_rate_threshold.get("minHeartRateValue").intValue()){
-                    GB.toast(getBaseContext(), (getBaseContext().getString(R.string.emergency_hr_anomaly_low)), 2000, GB.WARN);
-                    emergencyWarning(getBaseContext().getString(R.string.emergency_hr_anomaly_low));
-                    //LOW HEART RATE
-                }
 
-            }
-        }
-        }
-        else {
-            enableEmergencyHRTracking(false);
-        }
-    }
-    //HR VALUES:
-
-    private void emergencyWarning(String HR){
-
-        final Location lastKnownLocation = new CurrentPosition().getLastKnownLocation();
-        final Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
-        final MediaPlayer player = MediaPlayer.create(this, notification);
-        //this is whatsapp sending method. Set to false to prevent spamming
-        if((getPrefs().getString("emergency_hr_telno_cc1","")!="" && getPrefs().getString("emergency_hr_telno1","")!="") ||
-                (getPrefs().getString("emergency_hr_telno_cc1","")!="" || getPrefs().getString("emergency_hr_telno1","")!="")) {
-
-            if (!whatsappsupport.isAccessibilityOn()) {
-                accessibilityPopup();
-            }
-            else if (whatsappsupport.isAccessibilityOn() && !player.isPlaying()){//stops spam
-                whatsappsupport.sendWAEmergency(getPrefs().getString("emergency_hr_telno_cc1", ""), getPrefs().getString("emergency_hr_telno1", ""), lastKnownLocation, HR,true);
-                player.start();
-                finish();//prevent double, workaround
-            }
-        }
-
-        textHR.setText("!!!");
-        enableEmergencyHRTracking(false);
-
-
-        if(isHRRunning==true) {
-            isHRRunning = false;
-        }
-        finish();//prevent double, workaround
-    }
     private void accessibilityPopup(){
         LOG.debug("ACC ON:" +whatsappsupport.isAccessibilityOn());
         GB.toast(getBaseContext(), "Accessibility is not set for whatsapp messaging, please set first!", 5000, 0);

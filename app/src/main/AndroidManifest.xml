@@ -362,6 +362,7 @@
         </service>
         <service android:name="blk.freeyourgadget.gadgetbridge.service.NotificationCollectorMonitorService" />
         <service android:name="blk.freeyourgadget.gadgetbridge.service.DeviceCommunicationService" />
+        <service android:name="blk.freeyourgadget.gadgetbridge.service.emergencyhrsend.HRMonitor" />
         <service
             android:name="blk.freeyourgadget.gadgetbridge.devices.pinetime.PineTimeDFUService"
             android:label="PineTime Nordic DFU service" />
