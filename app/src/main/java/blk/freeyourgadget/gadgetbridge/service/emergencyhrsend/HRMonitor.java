@@ -3,6 +3,7 @@ package blk.freeyourgadget.gadgetbridge.service.emergencyhrsend;
 import static blk.freeyourgadget.gadgetbridge.GBApplication.getContext;
 import static blk.freeyourgadget.gadgetbridge.GBApplication.getPrefs;
 import static blk.freeyourgadget.gadgetbridge.GBApplication.isRunningOreoOrLater;
+
 import static blk.freeyourgadget.gadgetbridge.model.DeviceService.EXTRA_CONNECT_FIRST_TIME;
 import static blk.freeyourgadget.gadgetbridge.util.GB.NOTIFICATION_CHANNEL_HIGH_PRIORITY_ID;
 import static blk.freeyourgadget.gadgetbridge.util.GB.NOTIFICATION_CHANNEL_ID;
@@ -21,12 +22,16 @@ import android.location.Location;
 import android.media.MediaPlayer;
 import android.media.RingtoneManager;
 import android.net.Uri;
+import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.Settings;
+import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.core.app.RemoteInput;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.slf4j.Logger;
@@ -65,7 +70,9 @@ public class HRMonitor  extends Service {
     public static final String P_HR_READMAX;
     private boolean isHRRunning;// this variable clears up everytime...
     private static boolean notificationChannelsCreated;
-
+    private static final String EXTRA_REPLY = "reply";
+    private static final String ACTION_REPLY
+            = "blk.freeyourgadget.gadgetbridge.DebugActivity.action.reply";
     final WhatsappSupport whatsappsupport = new WhatsappSupport();
 
     static {
@@ -141,12 +148,19 @@ public class HRMonitor  extends Service {
         return prefs.getInt(DeviceSettingsPreferenceConst.PREF_HEARTRATE_ALERT_HIGH_THRESHOLD, 150);
     }
 
-    final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             switch (Objects.requireNonNull(intent.getAction())) {
+                case ACTION_REPLY: {
+                    Bundle remoteInput = RemoteInput.getResultsFromIntent(intent);
+                    CharSequence reply = remoteInput.getCharSequence(EXTRA_REPLY);
+                    LOG.info("got wearable reply: " + reply);
+                    GB.toast(context, "got wearable reply: " + reply, Toast.LENGTH_SHORT, GB.INFO);
+                    break;
+                }
                 case DeviceService.ACTION_REALTIME_SAMPLES:
-                    setMeasurementResults(intent.getSerializableExtra(DeviceService.EXTRA_REALTIME_SAMPLE));
+                    handleRealtimeSample(intent.getSerializableExtra(DeviceService.EXTRA_REALTIME_SAMPLE));
                     break;
                 default:
                     LOG.info("ignoring intent action " + intent.getAction());
@@ -155,6 +169,34 @@ public class HRMonitor  extends Service {
         }
     };
 
+    private void handleRealtimeSample(Serializable result) {
+        if (result instanceof ActivitySample) {
+            ActivitySample sample = (ActivitySample) result;
+            //GB.toast(this, "Heart Rate measured: " + sample.getHeartRate(), Toast.LENGTH_LONG, GB.INFO);
+            LOG.info("Emergency Heart Rate measured: " + sample.getHeartRate());
+            LOG.info("Entire sample: " + sample.toString());
+            if (HeartRateUtils.getInstance().isValidHeartRateValue(sample.getHeartRate())){
+                if (sample.getHeartRate() > heart_rate_threshold.get("maxHeartRateValue").intValue()){
+                    updateNotification(getString(R.string.emergencyhr_detail_activity_title), this,NOTIFICATION_ID_HR,getString(R.string.emergency_hr_anomaly_high)+" "+sample.getHeartRate());
+                    GB.toast(getBaseContext(), (getBaseContext().getString(R.string.emergency_hr_anomaly_high)), 2000, GB.WARN);
+                    //emergencyWarning(getBaseContext().getString(R.string.emergency_hr_anomaly_high));
+                    this.stopSelf();
+                    //HIGH HEART RATE
+                }
+                else if (sample.getHeartRate() < heart_rate_threshold.get("minHeartRateValue").intValue()){
+                    updateNotification(getString(R.string.emergencyhr_detail_activity_title), this,NOTIFICATION_ID_HR,getString(R.string.emergency_hr_anomaly_low)+" "+sample.getHeartRate());
+                    GB.toast(getBaseContext(), (getBaseContext().getString(R.string.emergency_hr_anomaly_low)), 2000, GB.WARN);
+                    //emergencyWarning(getBaseContext().getString(R.string.emergency_hr_anomaly_low));
+                    this.stopSelf();
+                    //LOW HEART RATE
+                }
+                else{
+                    updateNotification(getString(R.string.emergencyhr_detail_activity_title), this,NOTIFICATION_ID_HR,getString(R.string.emergencyhr_detail_activity_title)+" "+sample.getHeartRate());
+                }
+            }
+        }
+    }
+/*
     private void setMeasurementResults(Serializable result) {
         //progressHR.setVisibility(View.GONE);
         if (isHRRunning == true){
@@ -183,7 +225,7 @@ public class HRMonitor  extends Service {
         }
     }
     //HR VALUES:
-
+*/
     private void emergencyWarning(String HR){
 
         final Location lastKnownLocation = new CurrentPosition().getLastKnownLocation();
@@ -211,6 +253,7 @@ public class HRMonitor  extends Service {
         }
         //finish();//prevent double, workaround
     }
+/*
     private void enableEmergencyHRTracking(boolean enable) {
         IntentFilter filter = new IntentFilter();
         filter.addAction(DeviceService.ACTION_REALTIME_SAMPLES);
@@ -253,7 +296,7 @@ public class HRMonitor  extends Service {
         else{
         }
     }
-
+*/
     private void accessibilityPopup(){
         LOG.debug("ACC ON:" +whatsappsupport.isAccessibilityOn());
         GB.toast(getBaseContext(), "Accessibility is not set for whatsapp messaging, please set first!", 5000, 0);
@@ -267,19 +310,21 @@ public class HRMonitor  extends Service {
         super.onCreate();
         IntentFilter filter = new IntentFilter();
         filter.addAction(DeviceService.ACTION_REALTIME_SAMPLES);
-        getContext().registerReceiver(mReceiver, filter);
+        LocalBroadcastManager.getInstance(getContext()).registerReceiver(mReceiver, filter);
+        registerReceiver(mReceiver, filter);
 
     }
     @Override
     public void onDestroy() {
         super.onDestroy();
-        getContext().unregisterReceiver(mReceiver);
+        LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(mReceiver);
+        unregisterReceiver(mReceiver);
 
     }
     private void start() {
         if(!mStarted){
             createNotificationChannels(getContext());
-            startForeground(NOTIFICATION_ID_HR, this.createNotification(getString(R.string.emergencyhr_detail_activity_title), this));
+            startForeground(NOTIFICATION_ID_HR, this.createNotification(getString(R.string.emergencyhr_detail_activity_title), this,getString(R.string.emergencyhr_detail_activity_title)));
             mStarted = true;
         }
     }
@@ -340,17 +385,12 @@ public class HRMonitor  extends Service {
         return notification;
     }
 
-    public Notification createNotification(String text, Context context)
+    public Notification createNotification(String text, Context context, String message)
     {
-
-
-
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, NOTIFICATION_ID_HR_STRING);
-
-
         builder.setDefaults(Notification.DEFAULT_LIGHTS);
 
-        String message = "HR Service Test";
+
         builder.setSmallIcon(R.drawable.ic_heart_alert)
                 .setAutoCancel(false)
                 .setPriority(Notification.PRIORITY_MAX)
@@ -371,6 +411,17 @@ public class HRMonitor  extends Service {
         Notification notification = builder.build();
         notification.flags = Notification.FLAG_ONGOING_EVENT;
         return notification;
+    }
+
+    public void updateNotification(String text, Context context, int notification_id, String message) {
+        Notification notification = createNotification(text, context, message);
+        notify(notification_id, notification, context);
+    }
+
+    public static void notify(int id, @NonNull Notification notification, Context context) {
+        createNotificationChannels(context);
+
+        NotificationManagerCompat.from(context).notify(id, notification);
     }
 
     @Override

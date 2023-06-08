@@ -138,7 +138,26 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
                         textFlavourHRStatus.setText(getString(R.string.stop));
                         textHR.setText("...");
                         GB.toast(getBaseContext(), "STOP", 2000, 0);
-
+                    try {
+                        //the following will stops activity
+                        if(gbDevice!=null){
+                            stopService(new Intent(getContext(), HRMonitor.class));
+                        }
+                    } catch (IllegalStateException e) {
+                        String message = e.toString();
+                        if (message == null) {
+                            message = (getString(R.string.error_notification));
+                        }
+                        GB.notify(NOTIFICATION_ID_ERROR,
+                                new NotificationCompat.Builder(getContext(), NOTIFICATION_CHANNEL_HIGH_PRIORITY_ID)
+                                        .setSmallIcon(R.drawable.gadgetbridge_img)
+                                        .setContentTitle(getString(R.string.error))
+                                        .setContentText(message)
+                                        .setStyle(new NotificationCompat.BigTextStyle()
+                                                .bigText(getString(R.string.start) + "\"" + message + "\""))
+                                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                                        .build(), getContext());
+                    }
 
                 }
             });
@@ -149,20 +168,20 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
                         textHR.setText("...");
                         GB.toast(getBaseContext(), "START", 2000, 0);
                     try {
-                        //the following will ensure the notification manager is kept alive
+                        //the following will start activity
                         if(gbDevice!=null){
                             startService(new Intent(getContext(), HRMonitor.class).putExtra(GBDevice.EXTRA_DEVICE, gbDevice));
                         }
                     } catch (IllegalStateException e) {
                         String message = e.toString();
                         if (message == null) {
-                            message = getString(R.string._unknown_);
+                            message = (getString(R.string.error_notification));
                         }
                         GB.notify(NOTIFICATION_ID_ERROR,
                                 new NotificationCompat.Builder(getContext(), NOTIFICATION_CHANNEL_HIGH_PRIORITY_ID)
                                         .setSmallIcon(R.drawable.gadgetbridge_img)
-                                        .setContentTitle(getString(R.string.test))
-                                        .setContentText(getString(R.string.test_notification))
+                                        .setContentTitle(getString(R.string.error))
+                                        .setContentText(message)
                                         .setStyle(new NotificationCompat.BigTextStyle()
                                                 .bigText(getString(R.string.start) + "\"" + message + "\""))
                                         .setPriority(NotificationCompat.PRIORITY_DEFAULT)
