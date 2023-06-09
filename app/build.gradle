@@ -77,6 +77,11 @@ android {
             }
         }
     }
+    buildFeatures
+            {
+                dataBinding = true
+            }
+
 
     flavorDimensions "device_type"
     productFlavors {

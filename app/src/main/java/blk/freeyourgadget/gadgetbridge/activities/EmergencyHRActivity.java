@@ -5,56 +5,39 @@ import static blk.freeyourgadget.gadgetbridge.GBApplication.getPrefs;
 import static blk.freeyourgadget.gadgetbridge.util.GB.NOTIFICATION_CHANNEL_HIGH_PRIORITY_ID;
 import static blk.freeyourgadget.gadgetbridge.util.GB.NOTIFICATION_ID_ERROR;
 
-import android.accessibilityservice.AccessibilityService;
-import android.content.BroadcastReceiver;
+import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.location.Location;
-import android.media.MediaPlayer;
-import android.media.RingtoneManager;
-import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.text.TextUtils;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.databinding.DataBindingUtil;
+import androidx.fragment.app.DialogFragment;
 
-import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
-import com.google.i18n.phonenumbers.Phonenumber;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Serializable;
-import java.util.Calendar;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ScheduledExecutorService;
 
 import blk.freeyourgadget.gadgetbridge.GBApplication;
 import blk.freeyourgadget.gadgetbridge.R;
-import blk.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst;
+
+import blk.freeyourgadget.gadgetbridge.databinding.ActivityHeartrateEmergencyBinding;
 import blk.freeyourgadget.gadgetbridge.impl.GBDevice;
-import blk.freeyourgadget.gadgetbridge.model.ActivitySample;
 import blk.freeyourgadget.gadgetbridge.model.ActivityUser;
-import blk.freeyourgadget.gadgetbridge.model.DeviceService;
-import blk.freeyourgadget.gadgetbridge.service.NotificationCollectorMonitorService;
-import blk.freeyourgadget.gadgetbridge.service.devices.pebble.webview.CurrentPosition;
 import blk.freeyourgadget.gadgetbridge.service.emergencyhrsend.HRMonitor;
-import blk.freeyourgadget.gadgetbridge.service.emergencyhrsend.WhatsappAccessibilityService;
 import blk.freeyourgadget.gadgetbridge.service.emergencyhrsend.WhatsappSupport;
 import blk.freeyourgadget.gadgetbridge.util.GB;
-import blk.freeyourgadget.gadgetbridge.util.Prefs;
 
 public class EmergencyHRActivity extends AbstractGBActivity  {
     //Activity for heart rate monitoring.
@@ -78,22 +61,18 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
     final int birthYear = activityUser.getYearOfBirth();
     Button btnStopHR;
     Button btnStartHR;
-    private ScheduledExecutorService pulseScheduler;
     Map<String, Number> heart_rate_threshold = new HRMonitor().updateHeartRateThreshold();
+    boolean IS_ACTIVITY_RUNNING = new HRMonitor().IS_ACTIVITY_RUNNING;
 
-    public static final String P_HR_SMART;
-    public static final String P_HR_MANUAL;
-    public static final String P_HR_READMAX;
-
-
-    static {
-        Context CONTEXT = GBApplication.getContext();
-        P_HR_SMART = CONTEXT.getString(R.string.pref_emergency_hr_value_smart);
-        P_HR_MANUAL = CONTEXT.getString(R.string.pref_emergency_hr_value_manual);
-        P_HR_READMAX = CONTEXT.getString(R.string.pref_emergency_hr_value_readmax);
+    String IS_SERVICE_RUNNING()
+    {
+        if (IS_ACTIVITY_RUNNING == true) {
+            return getString(R.string.start);
+        } else {
+            return getString(R.string.stop);
+        }
     }
-
-
+    ActivityHeartrateEmergencyBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -102,7 +81,12 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
         final Context appContext = this.getApplicationContext();
 
         if (appContext instanceof GBApplication) {
+            binding = DataBindingUtil.setContentView(this, R.layout.activity_heartrate_emergency);
+
+            /*
+            binding =ActivityHeartrateEmergencyBinding.inflate(getLayoutInflater());
             setContentView(R.layout.activity_heartrate_emergency);
+            */
         }
         textHR = findViewById(R.id.textHR);
         textFlavourHRLimit = findViewById(R.id.textFlavourHRLimit);
@@ -110,7 +94,7 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
         btnStartHR = findViewById(R.id.btnStartHR);
         btnStopHR = findViewById(R.id.btnStopHR);
         progressHR = findViewById(R.id.progressHR);
-
+        textFlavourHRStatus.setText(IS_SERVICE_RUNNING());
 
         //enable broadcast if not detected, !receiverCheck meaning receiverCheck is false / nonexistent due to exception caused.
         if (getPrefs().getBoolean("pref_emergency_hr_enable",false) == true) {
@@ -126,17 +110,43 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
                     getString(R.string.prefs_heartrate_alert_low_threshold)+": " +String.valueOf(heart_rate_threshold.get("minHeartRateValue")+"\n"+
                             getString(R.string.prefs_heartrate_alert_high_threshold) +": " + String.valueOf(heart_rate_threshold.get("maxHeartRateValue")) )
             );
-            //pulseScheduler = startActivityPulse();
             btnStartHR.setText(getBaseContext().getString(R.string.start));
             btnStopHR.setText(getBaseContext().getString(R.string.stop));
+            btnStartHR.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    textFlavourHRStatus.setText(IS_SERVICE_RUNNING());
+                    textHR.setText("...");
+                    GB.toast(getBaseContext(), "START", 2000, 0);
+                    try {
+                        //the following will start activity
+                        if(gbDevice!=null){
+                            startService(new Intent(getContext(), HRMonitor.class).putExtra(GBDevice.EXTRA_DEVICE, gbDevice));
+                        }
+                    } catch (IllegalStateException e) {
+                        String message = e.toString();
+                        if (message == null) {
+                            message = (getString(R.string.error_notification));
+                        }
+                        GB.notify(NOTIFICATION_ID_ERROR,
+                                new NotificationCompat.Builder(getContext(), NOTIFICATION_CHANNEL_HIGH_PRIORITY_ID)
+                                        .setSmallIcon(R.drawable.gadgetbridge_img)
+                                        .setContentTitle(getString(R.string.error))
+                                        .setContentText(message)
+                                        .setStyle(new NotificationCompat.BigTextStyle()
+                                                .bigText(getString(R.string.start) + "\"" + message + "\""))
+                                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                                        .build(), getContext());
+                    }
+                }
+            });
             btnStopHR.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
                     //enable broadcast if not detected, !receiverCheck meaning receiverCheck is false / nonexistent due to exception caused.
                     //receiverCheck meaning it's true / existent.
-
-                        textFlavourHRStatus.setText(getString(R.string.stop));
                         textHR.setText("...");
+                        textFlavourHRStatus.setText(IS_SERVICE_RUNNING());
                         GB.toast(getBaseContext(), "STOP", 2000, 0);
                     try {
                         //the following will stops activity
@@ -161,39 +171,13 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
 
                 }
             });
-            btnStartHR.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                        textFlavourHRStatus.setText(getString(R.string.start));
-                        textHR.setText("...");
-                        GB.toast(getBaseContext(), "START", 2000, 0);
-                    try {
-                        //the following will start activity
-                        if(gbDevice!=null){
-                            startService(new Intent(getContext(), HRMonitor.class).putExtra(GBDevice.EXTRA_DEVICE, gbDevice));
-                        }
-                    } catch (IllegalStateException e) {
-                        String message = e.toString();
-                        if (message == null) {
-                            message = (getString(R.string.error_notification));
-                        }
-                        GB.notify(NOTIFICATION_ID_ERROR,
-                                new NotificationCompat.Builder(getContext(), NOTIFICATION_CHANNEL_HIGH_PRIORITY_ID)
-                                        .setSmallIcon(R.drawable.gadgetbridge_img)
-                                        .setContentTitle(getString(R.string.error))
-                                        .setContentText(message)
-                                        .setStyle(new NotificationCompat.BigTextStyle()
-                                                .bigText(getString(R.string.start) + "\"" + message + "\""))
-                                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                                        .build(), getContext());
-                    }
-                }
-            });
+
             if((getPrefs().getString("emergency_hr_telno_cc1","")!="" && getPrefs().getString("emergency_hr_telno1","")!="") ||
                     (getPrefs().getString("emergency_hr_telno_cc1","")!="" || getPrefs().getString("emergency_hr_telno1","")!="") ) {
                 LOG.debug("ACC ON:" +whatsappsupport.isAccessibilityOn());
                 if (!whatsappsupport.isAccessibilityOn()) {
-                    accessibilityPopup();
+                    DialogFragment dialog = new AccesibilityDialogFragment();
+                    dialog.show(getSupportFragmentManager(), "AccesibilityDialogFragment");
                 }
             }
         }
@@ -212,6 +196,26 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
     }
     */
 
+    public static class AccesibilityDialogFragment extends DialogFragment {
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            // Use the Builder class for convenient dialog construction
+            AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+            Context context = getContext();
+            builder.setMessage(context.getString(R.string.permission_notification_accesibility,
+                            context.getString(R.string.app_name),
+                            context.getString(R.string.ok)))
+                    .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            accessibilityPopup();
+                        }
+                    }).setNegativeButton(R.string.dismiss, new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {}
+                    });
+            return builder.create();
+        }
+    }
+
     @Override protected void onPause() {
         LOG.debug("HIDE THE WARNING SYSTEM");
 
@@ -225,9 +229,8 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
     }
 
 
-    private void accessibilityPopup(){
-        LOG.debug("ACC ON:" +whatsappsupport.isAccessibilityOn());
-        GB.toast(getBaseContext(), "Accessibility is not set for whatsapp messaging, please set first!", 5000, 0);
+    private static void accessibilityPopup(){
+        //LOG.debug("ACC ON:" +whatsappsupport.isAccessibilityOn());
         Intent accessible = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
         accessible.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         getContext().startActivity(accessible);

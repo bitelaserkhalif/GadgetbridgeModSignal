@@ -2037,7 +2037,7 @@
     <string name="pref_title_emergency_hr_telno_cc">Country Code</string>
     <string name="pref_summary_emergency_hr_telno">Would send via whatsapp. If not installed, would not work. Use the country code. MUST ADD NUMBER TO CONTACTS. Test in using button below.</string>
     <string name="stop">Stop</string>
-    <string name="accessibility_fingerprint">ACCESSIBILITY_TEST</string>
+    <string name="accessibility_fingerprint">Sent by GadgetbridgeModSignal (https://github.com/bitelaserkhalif/GadgetbridgeModSignal)</string>
     <string name="error_no_internet_access">Allow internet access to generate key for pairing.</string>
     <string name="pref_header_emergency_contacts1">Emergency Contact No.1</string>
     <string name="pref_summary_emergency_hr_telno_country_code">Country code, +62 type as 62.</string>
@@ -2045,4 +2045,5 @@
     <string name="pref_summary_whatsapp_test">Test whatsapp sending.</string>
     <string name="error">Error</string>
     <string name="error_notification">Error notification</string>
+    <string name="permission_notification_accesibility">%1$s needs to enable Accessibility for whatsapp messaging. \n\nPlease tap \'%2$s\' to continue, then select the Downloaded services/apps list, select the %1$s or Whatsapp Accessibility Sending Service, and enable.</string>
 </resources>
