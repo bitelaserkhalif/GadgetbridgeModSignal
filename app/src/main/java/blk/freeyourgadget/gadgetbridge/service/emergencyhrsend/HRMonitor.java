@@ -69,7 +69,10 @@ public class HRMonitor extends Service {
     public static Boolean mStarted = false;
     public static final String P_HR_MANUAL;
     public static final String P_HR_READMAX;
-    public boolean IS_ACTIVITY_RUNNING = false;// this variable for determining is this service running?...
+    private static boolean IS_ACTIVITY_RUNNING;// this variable for determining is this service running?...
+    public static boolean isRunning() {
+        return IS_ACTIVITY_RUNNING;
+    }
 
 
     private static boolean notificationChannelsCreated;

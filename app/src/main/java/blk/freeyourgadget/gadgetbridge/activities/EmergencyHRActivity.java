@@ -7,9 +7,11 @@ import static blk.freeyourgadget.gadgetbridge.util.GB.NOTIFICATION_ID_ERROR;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.view.View;
@@ -20,13 +22,16 @@ import android.widget.TextView;
 import androidx.core.app.NotificationCompat;
 import androidx.databinding.DataBindingUtil;
 import androidx.fragment.app.DialogFragment;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Serializable;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ScheduledExecutorService;
 
 import blk.freeyourgadget.gadgetbridge.GBApplication;
@@ -34,7 +39,9 @@ import blk.freeyourgadget.gadgetbridge.R;
 
 import blk.freeyourgadget.gadgetbridge.databinding.ActivityHeartrateEmergencyBinding;
 import blk.freeyourgadget.gadgetbridge.impl.GBDevice;
+import blk.freeyourgadget.gadgetbridge.model.ActivitySample;
 import blk.freeyourgadget.gadgetbridge.model.ActivityUser;
+import blk.freeyourgadget.gadgetbridge.model.DeviceService;
 import blk.freeyourgadget.gadgetbridge.service.emergencyhrsend.HRMonitor;
 import blk.freeyourgadget.gadgetbridge.service.emergencyhrsend.WhatsappSupport;
 import blk.freeyourgadget.gadgetbridge.util.GB;
@@ -62,10 +69,12 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
     Button btnStopHR;
     Button btnStartHR;
     Map<String, Number> heart_rate_threshold = new HRMonitor().updateHeartRateThreshold();
-    boolean IS_ACTIVITY_RUNNING = new HRMonitor().IS_ACTIVITY_RUNNING;
+    boolean IS_ACTIVITY_RUNNING = new HRMonitor().isRunning();
 
+//TODO: WHY IT CANNOT UPDATE?
     String IS_SERVICE_RUNNING()
     {
+        LOG.debug("RUNNING "+String.valueOf(IS_ACTIVITY_RUNNING));
         if (IS_ACTIVITY_RUNNING == true) {
             return getString(R.string.start);
         } else {
@@ -73,10 +82,14 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
         }
     }
     ActivityHeartrateEmergencyBinding binding;
-
+    IntentFilter filter = new IntentFilter();
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        filter.addAction(DeviceService.ACTION_REALTIME_SAMPLES);
+
+        LocalBroadcastManager.getInstance(getContext()).registerReceiver(mReceiver, filter);
+        getContext().registerReceiver(mReceiver, filter);//background update alongside check the service status
 
         final Context appContext = this.getApplicationContext();
 
@@ -94,12 +107,12 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
         btnStartHR = findViewById(R.id.btnStartHR);
         btnStopHR = findViewById(R.id.btnStopHR);
         progressHR = findViewById(R.id.progressHR);
-        textFlavourHRStatus.setText(IS_SERVICE_RUNNING());
-
-        //enable broadcast if not detected, !receiverCheck meaning receiverCheck is false / nonexistent due to exception caused.
+        //enable broadcast
         if (getPrefs().getBoolean("pref_emergency_hr_enable",false) == true) {
             //pulseScheduler = startActivityPulse();
             Intent intent = getIntent();
+
+
             Bundle bundle = intent.getExtras();
             if (bundle != null) {
                 gbDevice = bundle.getParcelable(GBDevice.EXTRA_DEVICE);
@@ -110,14 +123,13 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
                     getString(R.string.prefs_heartrate_alert_low_threshold)+": " +String.valueOf(heart_rate_threshold.get("minHeartRateValue")+"\n"+
                             getString(R.string.prefs_heartrate_alert_high_threshold) +": " + String.valueOf(heart_rate_threshold.get("maxHeartRateValue")) )
             );
+
             btnStartHR.setText(getBaseContext().getString(R.string.start));
             btnStopHR.setText(getBaseContext().getString(R.string.stop));
             btnStartHR.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    textFlavourHRStatus.setText(IS_SERVICE_RUNNING());
-                    textHR.setText("...");
-                    GB.toast(getBaseContext(), "START", 2000, 0);
+                    GB.toast(getBaseContext(), getString(R.string.start) + " " +getString(R.string.pref_title_emergency_hr), 2000, 0);
                     try {
                         //the following will start activity
                         if(gbDevice!=null){
@@ -145,9 +157,7 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
                 public void onClick(View view) {
                     //enable broadcast if not detected, !receiverCheck meaning receiverCheck is false / nonexistent due to exception caused.
                     //receiverCheck meaning it's true / existent.
-                        textHR.setText("...");
-                        textFlavourHRStatus.setText(IS_SERVICE_RUNNING());
-                        GB.toast(getBaseContext(), "STOP", 2000, 0);
+                        GB.toast(getBaseContext(), getString(R.string.stop) + " " +getString(R.string.pref_title_emergency_hr), 2000, 0);
                     try {
                         //the following will stops activity
                         if(gbDevice!=null){
@@ -186,15 +196,38 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
         }
 
         }
+    final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            switch (Objects.requireNonNull(intent.getAction())) {
+                case DeviceService.ACTION_REALTIME_SAMPLES:
+                    setMeasurementResults(intent.getSerializableExtra(DeviceService.EXTRA_REALTIME_SAMPLE));
+                    break;
+                default:
+                    LOG.info("ignoring intent action " + intent.getAction());
+                    break;
+            }
+        }
+    };
+    private void setMeasurementResults(Serializable result) {
+        if (result instanceof ActivitySample) {
+            ActivitySample sample = (ActivitySample) result;
+            if (HeartRateUtils.getInstance().isValidHeartRateValue(sample.getHeartRate())){
+                progressHR.setVisibility(View.GONE);
+                textHR.setText(String.valueOf(sample.getHeartRate()));
+                textFlavourHRStatus.setText(IS_SERVICE_RUNNING());
+            }
+        }
+    }
 
-    /*
         @Override
     protected void onDestroy() {
         super.onDestroy();
-        //LocalBroadcastManager.getInstance(this).unregisterReceiver(mReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mReceiver);
+        getContext().unregisterReceiver(mReceiver);
 
     }
-    */
+
 
     public static class AccesibilityDialogFragment extends DialogFragment {
         @Override
@@ -218,13 +251,16 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
 
     @Override protected void onPause() {
         LOG.debug("HIDE THE WARNING SYSTEM");
-
+        LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(mReceiver);
+        getContext().unregisterReceiver(mReceiver);
         super.onPause();
     }
 
     @Override protected void onResume() {
         LOG.debug("SHOW THE WARNING SYSTEM");
-
+        filter.addAction(DeviceService.ACTION_REALTIME_SAMPLES);
+        LocalBroadcastManager.getInstance(getContext()).registerReceiver(mReceiver, filter);
+        getContext().registerReceiver(mReceiver, filter);//background update alongside check the service status
         super.onResume();
     }
 
