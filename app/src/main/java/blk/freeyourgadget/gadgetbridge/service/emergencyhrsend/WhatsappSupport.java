@@ -84,6 +84,7 @@ public class WhatsappSupport {
 
         return phoneNumberUtil.isValidNumber(number);
     }
+
     //OVERLOADING IN PRACTICE: IF ARGUMENT OF WARNING ARE GIVEN, IT'LL BE SHOWN.
     public void sendWAEmergency(String countryCode, String telNo, @NonNull Location lastKnownLocation,boolean debugmode){
         if (debugmode==true)         LOG.info("TELNO COUNTRY CODE : "+ countryCode + " TELNO : "+ telNo +" Location : "+ lastKnownLocation.toString());
@@ -93,7 +94,6 @@ public class WhatsappSupport {
             whatsappIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             whatsappIntent.setType("text/plain");
             whatsappIntent.setPackage("com.whatsapp");
-            //"+393291876000"
             whatsappIntent.putExtra("jid",countryCode +telNo + "@s.whatsapp.net");
             whatsappIntent.putExtra(Intent.EXTRA_TEXT, "EMERGENCY WARNING:" + uri+"\n"+GBApplication.getContext().getString(R.string.accessibility_fingerprint));
 
@@ -114,7 +114,6 @@ public class WhatsappSupport {
             whatsappIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             whatsappIntent.setType("text/plain");
             whatsappIntent.setPackage("com.whatsapp");
-            //"+393291876000"
             whatsappIntent.putExtra("jid", countryCode + telNo + "@s.whatsapp.net");
             whatsappIntent.putExtra(Intent.EXTRA_TEXT, "EMERGENCY WARNING: " + reasoning + " " + uri+"\n"+GBApplication.getContext().getString(R.string.accessibility_fingerprint));
             try {
@@ -134,7 +133,6 @@ public class WhatsappSupport {
             whatsappIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             whatsappIntent.setType("text/plain");
             whatsappIntent.setPackage("com.whatsapp");
-            //"+393291876000"
             whatsappIntent.putExtra("jid", countryCode + telNo + "@s.whatsapp.net");
             whatsappIntent.putExtra(Intent.EXTRA_TEXT, "TESTING THE SENDING OF WHATSAPP MESSAGE"+ "\n"+GBApplication.getContext().getString(R.string.accessibility_fingerprint));
             try {
