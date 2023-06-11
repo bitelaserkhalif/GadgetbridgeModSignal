@@ -222,10 +222,11 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
 
         @Override
     protected void onDestroy() {
+        try {
+            LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(mReceiver);
+            getContext().unregisterReceiver(mReceiver);
+        }catch(Exception e){LOG.debug (e.toString());}
         super.onDestroy();
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(mReceiver);
-        getContext().unregisterReceiver(mReceiver);
-
     }
 
 
@@ -250,9 +251,10 @@ public class EmergencyHRActivity extends AbstractGBActivity  {
     }
 
     @Override protected void onPause() {
-        LOG.debug("HIDE THE WARNING SYSTEM");
-        LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(mReceiver);
-        getContext().unregisterReceiver(mReceiver);
+        LOG.debug("HIDE THE WARNING SYSTEM");try {
+            LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(mReceiver);
+            getContext().unregisterReceiver(mReceiver);
+        }catch(Exception e){LOG.debug (e.toString());}
         super.onPause();
     }
 

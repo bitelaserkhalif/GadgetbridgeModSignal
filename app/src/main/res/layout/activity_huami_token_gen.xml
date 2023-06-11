@@ -144,6 +144,7 @@
         android:layout_marginEnd="32dp"
         android:layout_marginBottom="20dp"
         android:text="@string/MiGetToken"
+        android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/button_get_agps"
         app:layout_constraintStart_toStartOf="parent" />
@@ -156,6 +157,7 @@
         android:layout_marginEnd="15dp"
         android:layout_marginBottom="20dp"
         android:text="@string/MiGetAGPS"
+        android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/button_get_token" />
