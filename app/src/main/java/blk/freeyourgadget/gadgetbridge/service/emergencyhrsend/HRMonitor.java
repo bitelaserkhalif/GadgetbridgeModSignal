@@ -188,7 +188,7 @@ public class HRMonitor extends Service {
             LOG.info("Entire sample: " + sample.toString());
             if (HeartRateUtils.getInstance().isValidHeartRateValue(sample.getHeartRate())){
                 if (sample.getHeartRate() > heart_rate_threshold.get("maxHeartRateValue").intValue()){
-                    updateNotification(getString(R.string.emergencyhr_detail_activity_title), this,NOTIFICATION_ID_HR,getString(R.string.emergency_hr_anomaly_high)+" "+sample.getHeartRate());
+                     updateNotification(getString(R.string.emergencyhr_detail_activity_title), this,NOTIFICATION_ID_HR,getString(R.string.emergency_hr_anomaly_high));
                     GB.toast(getBaseContext(), (getBaseContext().getString(R.string.emergency_hr_anomaly_high)), 2000, GB.WARN);
                     emergencyWarning(getBaseContext().getString(R.string.emergency_hr_anomaly_high));
                     LOG.debug("STOPPING");//STOP THE SERVICE
@@ -196,7 +196,7 @@ public class HRMonitor extends Service {
                     //HIGH HEART RATE
                 }
                 else if (sample.getHeartRate() < heart_rate_threshold.get("minHeartRateValue").intValue()){
-                    updateNotification(getString(R.string.emergencyhr_detail_activity_title), this,NOTIFICATION_ID_HR,getString(R.string.emergency_hr_anomaly_low)+" "+sample.getHeartRate());
+                    updateNotification(getString(R.string.emergencyhr_detail_activity_title), this,NOTIFICATION_ID_HR,getString(R.string.emergency_hr_anomaly_low));
                     GB.toast(getBaseContext(), (getBaseContext().getString(R.string.emergency_hr_anomaly_low)), 2000, GB.WARN);
                     emergencyWarning(getBaseContext().getString(R.string.emergency_hr_anomaly_low));
                     LOG.debug("STOPPING");//STOP THE SERVICE
@@ -204,7 +204,7 @@ public class HRMonitor extends Service {
                     //LOW HEART RATE
                 }
                 else{
-                    updateNotification(getString(R.string.emergencyhr_detail_activity_title), this,NOTIFICATION_ID_HR,getString(R.string.emergencyhr_detail_activity_title)+" "+sample.getHeartRate());
+                    updateNotification(getString(R.string.emergencyhr_detail_activity_title), this,NOTIFICATION_ID_HR,getString(R.string.emergencyhr_detail_activity_title)+" "+getString(R.string.activity_type_running));
                 }
             }
         }
@@ -360,8 +360,10 @@ public class HRMonitor extends Service {
         LOG.debug("STARTING EMERGENCY HR!");
         start();
 
-        /*
         GBDevice gbDevice = intent.getParcelableExtra(GBDevice.EXTRA_DEVICE);
+        GBApplication.deviceService(gbDevice).onHeartRateTest();
+
+        /*
         String btDeviceAddress = null;
         LOG.debug(gbDevice.toString());
 
