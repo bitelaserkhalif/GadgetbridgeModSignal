@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+<androidx.preference.PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
     <SwitchPreference
         android:defaultValue="false"
         android:icon="@drawable/ic_heart"
         android:key="emergency_hr_device"
         android:summary="@string/pref_hr_enabled_device"
-        android:title="@string/emergencyhr_detail_activity_title" />
+        android:title="@string/emergencyhr_detail_activity_title"
+        app:isPreferenceVisible="false" />
 
 </androidx.preference.PreferenceScreen>
