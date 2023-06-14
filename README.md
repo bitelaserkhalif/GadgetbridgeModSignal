@@ -23,7 +23,6 @@ BASED ON VER 0.72.0, forked Mar 11, 2023 with commit hash: 007f07012575d11e52f7a
   - Load from contacts, not manually
   - Sport sensing: sense high demand activity
   - Optimizations
-  - Other functions such as
   
 
 
