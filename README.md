@@ -1,20 +1,30 @@
-Gadgetbridge Mod Signal
+Gadgetbridge Mod Signal (emergency heart rate monitoring)
 ============
 Is a project for my oncoming thesis. This adds functions to gadgetbridge
 that can be considered as anti-feature for convenience, but deletes Pebble capability
-due to conflicts with original gadgetbridge application.
+due to conflicts with original gadgetbridge application. **This project aims for adding emergency heart rate monitoring**
+
+BASED ON VER 0.72.0, forked Mar 11, 2023 with commit hash: 007f07012575d11e52f7a91f6556056eb2b0c117
 
 ## What changed?
-**(WARNING: Some of them WIP!)**
+**(WARNING: Some of them are experimental. Use at your own risk!)**
 
 
-- Huami (XIAOMI and AMAZFIT)
+- Huami (XIAOMI for now)
   - Add key generation systems
+- Age based heart rate limit
+- Allow low heart rate warning (false positive can occur if watch are taken off!)
+- Notify via whatsapp
 - Removal of Pebble capability due to conflicting install with gadgetbridge. If you want that, do not install this app.
-- COMING SOON:
-  - Age based heart rate limit
-  - Allow low heart rate warning (false positive can occur if watch are taken off!)
-  - Notify via whatsapp
+- COMING SOON but would not be implemented:
+  - When the device is locked, warn.
+  - SMS system
+  - Multiple contacts
+  - Load from contacts, not manually
+  - Sport sensing: sense high demand activity
+  - Optimizations
+  - Other functions such as
+  
 
 
 Original Readme
